@@ -94,6 +94,21 @@ void test("selector navigation crosses page boundaries instead of wrapping insid
   assert.equal(result, "three");
 });
 
+void test("custom ui mock waits for async done callbacks before resolving", async () => {
+  const ctx = createCommandContext();
+
+  const result = await ctx.ui.custom<string>((_tui, _theme, _keybindings, done) => {
+    void Promise.resolve().then(() => done("done"));
+    return {
+      title: "Async custom",
+      invalidate: () => undefined,
+      render: () => ["Async custom"],
+    };
+  });
+
+  assert.equal(result, "done");
+});
+
 void test("enhancement retries once when the first model response breaks the sentinel contract", async () => {
   const runtime = createRuntimeState();
   const harness = createMockPi();

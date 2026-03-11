@@ -2,6 +2,7 @@ import type { Api, Model } from "@mariozechner/pi-ai";
 import type { ExtensionContext } from "@mariozechner/pi-coding-agent";
 import { DEFAULT_SETTINGS } from "../constants.js";
 import { parseModelRef } from "../model-selection.js";
+import { upsertExactModelOverride } from "../overrides.js";
 import { cloneSettings } from "../state.js";
 import type { PromptsmithRuntimeState } from "../state.js";
 import type { ModelRef, PromptsmithFamily, PromptsmithSettings } from "../types.js";
@@ -344,10 +345,10 @@ async function manageExactOverrides(
         break;
       case "Choose model manually": {
         const modelRef = await chooseModelRef(ctx, "Choose the model to route");
-        if (modelRef && modelRef !== null) {
+        if (modelRef) {
           const family = await selectFamily(ctx, "Choose the prompt style for this model");
           if (family) {
-            const next = upsertExactOverride(settings, modelRef, family);
+            const next = upsertExactModelOverride(settings, modelRef, family);
             persistSettings(
               ctx,
               runtime,
@@ -386,7 +387,7 @@ async function manageExactOverrides(
         if (choice?.startsWith("Map active model") && ctx.model) {
           const family = await selectFamily(ctx, "Choose the prompt style for the active model");
           if (family) {
-            const next = upsertExactOverride(
+            const next = upsertExactModelOverride(
               settings,
               { provider: ctx.model.provider, id: ctx.model.id },
               family
@@ -479,40 +480,28 @@ async function managePatternOverrides(
   }
 }
 
-function upsertExactOverride(
-  settings: PromptsmithSettings,
-  modelRef: ModelRef,
-  family: PromptsmithFamily
-): PromptsmithSettings {
-  return {
-    ...settings,
-    exactModelOverrides: [
-      ...settings.exactModelOverrides.filter(
-        (entry) => !(entry.provider === modelRef.provider && entry.id === modelRef.id)
-      ),
-      { ...modelRef, family },
-    ],
-  };
-}
-
 function updateFamilyEnhancerModel(
   settings: PromptsmithSettings,
   family: PromptsmithFamily,
   modelRef: ModelRef | undefined
 ): PromptsmithSettings {
   const current = settings.familyEnhancerModels ?? {};
-  const nextFamilyModels = {
-    ...(current.gpt ? { gpt: current.gpt } : {}),
-    ...(current.claude ? { claude: current.claude } : {}),
-    ...(family === "gpt" && modelRef ? { gpt: modelRef } : {}),
-    ...(family === "claude" && modelRef ? { claude: modelRef } : {}),
-  };
+  const nextFamilyModels = { ...current };
 
-  if (family === "gpt" && !modelRef) {
-    delete nextFamilyModels.gpt;
+  if (family === "gpt") {
+    if (modelRef) {
+      nextFamilyModels.gpt = modelRef;
+    } else {
+      delete nextFamilyModels.gpt;
+    }
   }
-  if (family === "claude" && !modelRef) {
-    delete nextFamilyModels.claude;
+
+  if (family === "claude") {
+    if (modelRef) {
+      nextFamilyModels.claude = modelRef;
+    } else {
+      delete nextFamilyModels.claude;
+    }
   }
 
   return Object.keys(nextFamilyModels).length > 0

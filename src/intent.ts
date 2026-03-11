@@ -204,6 +204,8 @@ export function detectTaskIntent(draft: string): PromptsmithTaskIntent {
   const hasVerificationSignal = matchesAny(normalizedDraft, VERIFICATION_PATTERNS);
   const hasExecutionVerb = matchesAny(normalizedDraft, EXECUTION_VERB_PATTERNS);
   const hasImplementVerb = matchesAny(normalizedDraft, IMPLEMENT_PATTERNS);
+  // Keep question-led "why"/"how" drafts out of this EXPLAIN_LEAD_PATTERNS fast path so they can
+  // fall through to STRONG_INTENT_RULES and match stronger operational intent when present.
   if (startsAsExplanation && !requestsOperationalAction && !startsWithQuestionLead) {
     return "explain";
   }

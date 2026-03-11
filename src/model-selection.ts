@@ -52,6 +52,11 @@ export async function resolveEnhancerModel(
       }
       return resolveConfiguredModel(modelRegistry, targetFamily, familyRef, "family-linked");
     }
+
+    default:
+      throw new Error(
+        `Promptsmith received unsupported enhancer-model mode: ${String(settings.enhancerModelMode)}.`
+      );
   }
 }
 

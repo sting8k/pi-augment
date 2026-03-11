@@ -146,28 +146,35 @@ export async function runEnhancementWithLoader(
   message: string,
   task: (signal: AbortSignal) => Promise<string | null>
 ): Promise<string | null> {
+  let taskError: Error | undefined;
+
   return ctx.ui
     .custom<string | null>((tui, theme, _keybindings, done) => {
       const loader = new BorderedLoader(tui, theme, message, { cancellable: true });
       loader.onAbort = () => done(null);
 
-      void task(loader.signal)
+      const taskPromise = task(loader.signal)
         .then(done)
         .catch((error: unknown) => {
-          done(`__PROMPTSMITH_ERROR__${formatError(error)}`);
+          if (error instanceof Error) {
+            taskError = error;
+            done(null);
+            throw error;
+          }
+
+          const unexpectedError = new Error("Promptsmith enhancement failed.");
+          taskError = unexpectedError;
+          done(null);
+          throw unexpectedError;
         });
+      void taskPromise.catch(() => undefined);
 
       return loader;
     })
     .then((result) => {
-      if (result === null) {
-        return null;
+      if (taskError !== undefined) {
+        throw taskError;
       }
-
-      if (result.startsWith("__PROMPTSMITH_ERROR__")) {
-        throw new Error(result.replace("__PROMPTSMITH_ERROR__", ""));
-      }
-
       return result;
     });
 }
@@ -344,13 +351,6 @@ function createTimeoutError(timeoutMs: number): Error {
   return new Error(
     `Promptsmith enhancement timed out after ${seconds} seconds. Try again or choose a faster enhancer model.`
   );
-}
-
-function formatError(error: unknown): string {
-  if (error instanceof Error) {
-    return error.message;
-  }
-  return String(error);
 }
 
 export function buildEnhancerModeLabel(

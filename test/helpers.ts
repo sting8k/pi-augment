@@ -162,9 +162,22 @@ export function createCommandContext(options?: {
       custom: (factory: unknown) => {
         let resolved = false;
         let result: unknown;
+        let resolveResult: ((value: unknown) => void) | undefined;
+        let customComponent:
+          | {
+              render?: (width: number) => string[];
+              handleInput?: (data: string) => void;
+              title?: string;
+              allItems?: { value: string; label: string }[];
+              onDone?: (value: string | undefined) => void;
+              dispose?: () => void;
+            }
+          | undefined;
         const done = (value: unknown) => {
           resolved = true;
           result = value;
+          customComponent?.dispose?.();
+          resolveResult?.(result);
         };
 
         const theme: {
@@ -176,16 +189,6 @@ export function createCommandContext(options?: {
           bg: (_color: string, text: string) => text,
           bold: (text: string) => text,
         };
-
-        let customComponent:
-          | {
-              render?: (width: number) => string[];
-              handleInput?: (data: string) => void;
-              title?: string;
-              allItems?: { value: string; label: string }[];
-              onDone?: (value: string | undefined) => void;
-            }
-          | undefined;
 
         const captureRender = () => {
           if (customComponent?.render) {
@@ -215,7 +218,12 @@ export function createCommandContext(options?: {
           title?: string;
           allItems?: { value: string; label: string }[];
           onDone?: (value: string | undefined) => void;
+          dispose?: () => void;
         };
+
+        if (resolved) {
+          customComponent.dispose?.();
+        }
 
         if (customComponent.title) {
           uiState.customTitles.push(customComponent.title);
@@ -250,7 +258,13 @@ export function createCommandContext(options?: {
           customComponent.onDone(undefined);
         }
 
-        return Promise.resolve(result);
+        if (resolved) {
+          return Promise.resolve(result);
+        }
+
+        return new Promise((resolve) => {
+          resolveResult = resolve;
+        });
       },
       confirm: () => Promise.resolve(false),
       onTerminalInput: () => () => undefined,

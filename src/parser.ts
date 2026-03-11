@@ -1,7 +1,9 @@
 import { SENTINEL_CLOSE, SENTINEL_OPEN } from "./constants.js";
 
 export function parseEnhancedPrompt(responseText: string): string {
-  const pattern = /<promptsmith-enhanced-prompt>([\s\S]*?)<\/promptsmith-enhanced-prompt>/g;
+  const escapedOpen = escapeRegExp(SENTINEL_OPEN);
+  const escapedClose = escapeRegExp(SENTINEL_CLOSE);
+  const pattern = new RegExp(`${escapedOpen}([\\s\\S]*?)${escapedClose}`, "g");
   const matches = [...responseText.matchAll(pattern)];
 
   if (matches.length !== 1) {
@@ -40,4 +42,8 @@ function normalizePromptText(text: string): string {
     .replace(/^\uFEFF/, "")
     .replace(/\r\n/g, "\n")
     .trim();
+}
+
+function escapeRegExp(value: string): string {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }

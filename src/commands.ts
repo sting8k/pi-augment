@@ -2,6 +2,7 @@ import type { ExtensionCommandContext } from "@mariozechner/pi-coding-agent";
 import { HELP_LINES } from "./constants.js";
 import { enhanceEditorDraft, type EnhancementServices } from "./enhance.js";
 import { parseModelRef } from "./model-selection.js";
+import { upsertExactModelOverride } from "./overrides.js";
 import type { PromptsmithRuntimeState } from "./state.js";
 import type {
   ParsedPromptsmithCommand,
@@ -445,22 +446,6 @@ function handleTimeoutCommand(
     { ...runtime.getSettings(), enhancementTimeoutMs: timeoutMs },
     `Enhancement timeout set to ${formatTimeoutSeconds(timeoutMs)}.`
   );
-}
-
-function upsertExactModelOverride(
-  settings: PromptsmithSettings,
-  modelRef: { provider: string; id: string },
-  family: PromptsmithFamily
-): PromptsmithSettings {
-  return {
-    ...settings,
-    exactModelOverrides: [
-      ...settings.exactModelOverrides.filter(
-        (entry) => !(entry.provider === modelRef.provider && entry.id === modelRef.id)
-      ),
-      { ...modelRef, family },
-    ],
-  };
 }
 
 function parseFamily(value: string | undefined): PromptsmithFamily | undefined {

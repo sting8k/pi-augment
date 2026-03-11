@@ -367,7 +367,7 @@ void test("second enhancement request while busy is rejected", async () => {
   );
 });
 
-void test("unsupported rpc-like mode fails clearly without editor mutation", async () => {
+void test("theme enumeration alone does not block enhancement", async () => {
   const runtime = createRuntimeState();
   const harness = createMockPi();
   const ctx = createCommandContext({
@@ -377,12 +377,15 @@ void test("unsupported rpc-like mode fails clearly without editor mutation", asy
   });
 
   await handlePromptsmithCommand("", ctx, runtime, {
-    ...createServices(harness, () => Promise.resolve(createCompleteResponse("should not happen"))),
+    ...createServices(harness, () => Promise.resolve(createCompleteResponse("Enhanced prompt"))),
     runCancellableTask: createRunTaskStub("__RUN_TASK__"),
   });
 
-  assert.equal(ctx.uiState.editorText, "draft");
-  assert.match(ctx.uiState.notifications.at(-1)?.message ?? "", /RPC mode/);
+  assert.equal(ctx.uiState.editorText, "Enhanced prompt");
+  assert.doesNotMatch(
+    ctx.uiState.notifications.map((entry) => entry.message).join("\n"),
+    /RPC mode/
+  );
 });
 
 void test("reset-settings restores default settings", async () => {

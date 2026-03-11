@@ -178,7 +178,9 @@ function computeSafeInputBudget(model: Model<Api>): number {
     MAX_OUTPUT_RESERVE_TOKENS,
     Math.max(DEFAULT_OUTPUT_RESERVE_TOKENS, Math.floor(model.maxTokens / 2))
   );
-  return Math.max(2048, Math.floor(model.contextWindow * 0.8) - outputReserve);
+  const available = Math.floor(model.contextWindow * 0.8) - outputReserve;
+  const usableRoom = model.contextWindow - outputReserve;
+  return Math.max(0, Math.min(Math.max(2048, available), usableRoom));
 }
 
 function normalizeExcerptText(text: string): string {

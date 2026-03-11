@@ -138,6 +138,25 @@ void test("buildPromptContext does not claim missing conversation was dropped", 
   assert.equal(promptContext.droppedContext.includes("recent conversation"), false);
 });
 
+void test("buildPromptContext caps the safe input budget to the enhancer model usable room", async () => {
+  const model = createModel({ contextWindow: 1_500, maxTokens: 1_000 });
+  const runtime = createRuntimeState();
+  const ctx = createCommandContext({ model, entries: [] });
+
+  await assert.rejects(
+    buildPromptContext({
+      ctx,
+      draft: "Tiny prompt",
+      settings: runtime.getSettings(),
+      activeModel: model,
+      targetFamily: "gpt",
+      enhancerModel: model,
+      exec: () => Promise.resolve({ stdout: "", stderr: "", code: 0 }),
+    }),
+    /too large/i
+  );
+});
+
 void test("gpt strategy request changes instructions between plain and execution-contract modes", () => {
   const plainRequest = buildGptStrategyRequest(
     createPromptContext({ effectiveRewriteMode: "plain", intent: "explain" })
@@ -165,6 +184,19 @@ void test("claude execution-contract strategy allows stronger explicit structure
   assert.match(text, /XML-like sections/i);
   assert.match(text, /smallest strong contract/i);
   assert.match(text, /clear feature goal/i);
+});
+
+void test("extractUserText finds the user message when system messages are prepended", () => {
+  assert.equal(
+    extractUserText({
+      messages: [
+        { role: "system", content: "system guidance" },
+        { role: "developer", content: "developer guidance" },
+        { role: "user", content: [{ type: "text", text: "Actual user prompt" }] },
+      ],
+    }),
+    "Actual user prompt"
+  );
 });
 
 void test("status report includes rewrite mode, timeout, and draft intent when interactive", () => {
@@ -266,12 +298,12 @@ void test("status report reuses the last analyzed draft resolution outside inter
   });
   buildStatusReport(interactiveCtx, runtime);
 
-  const rpcLikeCtx = createCommandContext({
+  const headlessCtx = createCommandContext({
+    hasUI: false,
     model: createModel(),
     editorText: "Explain this",
-    themeCount: 0,
   });
-  const report = buildStatusReport(rpcLikeCtx, runtime);
+  const report = buildStatusReport(headlessCtx, runtime);
 
   assert.match(report, /configured rewrite mode: auto/);
   assert.match(report, /effective rewrite mode: unavailable outside interactive editor mode/);
@@ -301,8 +333,8 @@ function createPromptContext(
 function extractUserText(request: {
   messages: { role: string; content: string | unknown[] }[];
 }): string {
-  const userMessage = request.messages[0];
-  assert.equal(userMessage?.role, "user");
+  const userMessage = request.messages.find((message) => message.role === "user");
+  assert.ok(userMessage, "expected a user message");
   if (typeof userMessage.content === "string") {
     return userMessage.content;
   }

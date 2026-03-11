@@ -10,14 +10,6 @@ export function detectRuntimeSupport(ctx: ExtensionContext): PromptsmithRuntimeS
     };
   }
 
-  if (ctx.ui.getAllThemes().length === 0) {
-    return {
-      interactiveTui: false,
-      reason:
-        "Promptsmith in-place editor enhancement is not supported in RPC mode because Pi cannot read the current editor buffer there.",
-    };
-  }
-
   return { interactiveTui: true };
 }
 

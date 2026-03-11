@@ -68,6 +68,16 @@ void test("resolveEnhancerModel validates configuration and API keys", async () 
     /no fixed enhancer model is configured/i
   );
 
+  await assert.rejects(
+    resolveEnhancerModel(
+      { ...settings, enhancerModelMode: "bogus" as never },
+      "gpt",
+      model,
+      ctx.modelRegistry
+    ),
+    /unsupported enhancer-model mode: bogus/i
+  );
+
   const noKeyCtx = createCommandContext({
     model,
     allModels: [model],
@@ -155,12 +165,13 @@ void test("sanitizeSettings rejects unknown schema versions", () => {
   assert.equal(sanitizeSettings({ version: 2 }), undefined);
 });
 
-void test("runtime support detects interactive TUI versus rpc-like contexts", () => {
-  const interactiveCtx = createCommandContext({ themeCount: 1 });
-  const rpcCtx = createCommandContext({ themeCount: 0 });
+void test("runtime support relies on hasUI instead of theme enumeration", () => {
+  const interactiveCtx = createCommandContext({ hasUI: true, themeCount: 0 });
+  const headlessCtx = createCommandContext({ hasUI: false, themeCount: 1 });
 
   assert.equal(detectRuntimeSupport(interactiveCtx).interactiveTui, true);
-  assert.equal(detectRuntimeSupport(rpcCtx).interactiveTui, false);
+  assert.equal(detectRuntimeSupport(headlessCtx).interactiveTui, false);
+  assert.match(detectRuntimeSupport(headlessCtx).reason ?? "", /interactive mode/i);
 });
 
 void test("replacing settings clears stale draft analysis", () => {
