@@ -6,6 +6,14 @@ Inspired by [pi-promptsmith](https://github.com/ayagmar/pi-promptsmith) and [pro
 
 ## Install
 
+From npm:
+
+```bash
+pi install npm:pi-augment
+```
+
+From GitHub:
+
 ```bash
 pi install https://github.com/sting8k/pi-augment
 ```
