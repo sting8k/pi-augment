@@ -22,7 +22,7 @@ pi -e https://github.com/sting8k/pi-augment
 ## Usage
 
 ```
-/aug <your prompt here>
+/augment <your prompt here>
 ```
 
 Type your prompt after `/aug`, the extension will:
@@ -35,10 +35,10 @@ Type your prompt after `/aug`, the extension will:
 ## Examples
 
 ```
-/aug fix the login bug where users get redirected to 404
-/aug refactor the strategy builder to reduce branching
-/aug review this PR for security issues
-/aug explain how the model routing works
+/augment fix the login bug where users get redirected to 404
+/augment refactor the strategy builder to reduce branching
+/augment review this PR for security issues
+/augment explain how the model routing works
 ```
 
 ## Features
