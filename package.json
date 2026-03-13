@@ -1,7 +1,7 @@
 {
   "name": "pi-augment",
   "version": "1.0.0",
-  "description": "Intent-aware prompt rewriter for Pi using the Prompt Leverage framework",
+  "description": "Augment-style prompt rewriter for Pi — one command, stronger prompts",
   "keywords": [
     "pi-package",
     "pi-extension",
