@@ -1,5 +1,5 @@
 import type { SelectDialogItem } from "./select-dialog.js";
-import type { ModelRef, PromptsmithSettings } from "../types.js";
+import type { ModelRef, AugmentSettings } from "../types.js";
 
 export type SettingsMenuOptionId =
   | "enabled"
@@ -53,26 +53,26 @@ export const FAMILY_OPTIONS = [
 ] as const;
 
 export function buildSettingsMenuOptions(
-  settings: PromptsmithSettings
+  settings: AugmentSettings
 ): Record<SettingsMenuOptionId, SelectDialogItem> {
   return {
     enabled: createSettingsMenuItem(
       "enabled",
       "Prompt enhancement",
       onOff(settings.enabled),
-      "Master switch for /promptsmith and Alt+P."
+      "Master switch for /augment and Alt+P."
     ),
     shortcutEnabled: createSettingsMenuItem(
       "shortcutEnabled",
       "Keyboard shortcut (Alt+P)",
       onOff(settings.shortcutEnabled),
-      "Run Promptsmith directly from the editor."
+      "Run Augment directly from the editor."
     ),
     statusBarEnabled: createSettingsMenuItem(
       "statusBarEnabled",
       "Footer status bar",
       onOff(settings.statusBarEnabled),
-      "Show compact live Promptsmith status in the footer."
+      "Show compact live Augment status in the footer."
     ),
     targetFamilyMode: createSettingsMenuItem(
       "targetFamilyMode",
@@ -132,7 +132,7 @@ export function buildSettingsMenuOptions(
       "rewriteStrength",
       "Rewrite strength",
       capitalize(settings.rewriteStrength),
-      "How aggressively Promptsmith rewrites the draft."
+      "How aggressively Augment rewrites the draft."
     ),
     rewriteMode: createSettingsMenuItem(
       "rewriteMode",
@@ -167,18 +167,18 @@ export function buildSettingsMenuOptions(
     reset: {
       value: "reset",
       label: "Reset saved settings",
-      description: "Restore Promptsmith settings to defaults.",
+      description: "Restore Augment settings to defaults.",
     },
     done: {
       value: "done",
       label: "Done",
-      description: "Close Promptsmith settings.",
+      description: "Close Augment settings.",
     },
   };
 }
 
 export function describeSelectedTargetFamilyMode(
-  value: PromptsmithSettings["targetFamilyMode"]
+  value: AugmentSettings["targetFamilyMode"]
 ): string | undefined {
   switch (value) {
     case "auto":
@@ -191,7 +191,7 @@ export function describeSelectedTargetFamilyMode(
 }
 
 export function describeSelectedEnhancerMode(
-  value: PromptsmithSettings["enhancerModelMode"]
+  value: AugmentSettings["enhancerModelMode"]
 ): string | undefined {
   switch (value) {
     case "active":
@@ -204,7 +204,7 @@ export function describeSelectedEnhancerMode(
 }
 
 export function describeSelectedStrength(
-  value: PromptsmithSettings["rewriteStrength"]
+  value: AugmentSettings["rewriteStrength"]
 ): string | undefined {
   switch (value) {
     case "light":
@@ -217,7 +217,7 @@ export function describeSelectedStrength(
 }
 
 export function describeSelectedRewriteMode(
-  value: PromptsmithSettings["rewriteMode"]
+  value: AugmentSettings["rewriteMode"]
 ): string | undefined {
   switch (value) {
     case "auto":
@@ -231,7 +231,7 @@ export function describeSelectedRewriteMode(
 
 export function parseLabeledTargetFamilyMode(
   value: string | undefined
-): PromptsmithSettings["targetFamilyMode"] | undefined {
+): AugmentSettings["targetFamilyMode"] | undefined {
   if (value?.startsWith("auto")) return "auto";
   if (value?.startsWith("gpt")) return "gpt";
   if (value?.startsWith("claude")) return "claude";
@@ -240,7 +240,7 @@ export function parseLabeledTargetFamilyMode(
 
 export function parseLabeledEnhancerMode(
   value: string | undefined
-): PromptsmithSettings["enhancerModelMode"] | undefined {
+): AugmentSettings["enhancerModelMode"] | undefined {
   if (value?.startsWith("active")) return "active";
   if (value?.startsWith("fixed")) return "fixed";
   if (value?.startsWith("family-linked")) return "family-linked";
@@ -249,7 +249,7 @@ export function parseLabeledEnhancerMode(
 
 export function parseLabeledStrength(
   value: string | undefined
-): PromptsmithSettings["rewriteStrength"] | undefined {
+): AugmentSettings["rewriteStrength"] | undefined {
   if (value?.startsWith("light")) return "light";
   if (value?.startsWith("balanced")) return "balanced";
   if (value?.startsWith("strong")) return "strong";
@@ -258,7 +258,7 @@ export function parseLabeledStrength(
 
 export function parseLabeledRewriteMode(
   value: string | undefined
-): PromptsmithSettings["rewriteMode"] | undefined {
+): AugmentSettings["rewriteMode"] | undefined {
   if (value?.startsWith("auto")) return "auto";
   if (value?.startsWith("plain")) return "plain";
   if (value?.startsWith("execution-contract")) return "execution-contract";
@@ -294,7 +294,7 @@ export function formatTimeoutSeconds(timeoutMs: number): string {
   return `${Math.floor(timeoutMs / 1_000)}s`;
 }
 
-function describeTargetFamilyMode(settings: PromptsmithSettings): string {
+function describeTargetFamilyMode(settings: AugmentSettings): string {
   switch (settings.targetFamilyMode) {
     case "auto":
       return "Auto (match current model)";
@@ -305,7 +305,7 @@ function describeTargetFamilyMode(settings: PromptsmithSettings): string {
   }
 }
 
-function describeEnhancerMode(settings: PromptsmithSettings): string {
+function describeEnhancerMode(settings: AugmentSettings): string {
   switch (settings.enhancerModelMode) {
     case "active":
       return "Active model";
@@ -316,7 +316,7 @@ function describeEnhancerMode(settings: PromptsmithSettings): string {
   }
 }
 
-function describeRewriteMode(settings: PromptsmithSettings): string {
+function describeRewriteMode(settings: AugmentSettings): string {
   switch (settings.rewriteMode) {
     case "auto":
       return "Auto (infer task vs plain rewrite)";

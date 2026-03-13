@@ -12,12 +12,12 @@ import {
   upsertExactModelOverride,
   upsertFamilyOverride,
 } from "./overrides.js";
-import type { PromptsmithRuntimeState } from "./state.js";
+import type { AugmentRuntimeState } from "./state.js";
 import type {
-  ParsedPromptsmithCommand,
-  PromptsmithFamily,
-  PromptsmithRewriteMode,
-  PromptsmithSettings,
+  ParsedAugmentCommand,
+  AugmentFamily,
+  AugmentRewriteMode,
+  AugmentSettings,
 } from "./types.js";
 import { openSettingsUi, resetGlobalSettings } from "./ui/settings.js";
 import { buildStatusReport } from "./ui/status.js";
@@ -25,19 +25,19 @@ import { detectRuntimeSupport, parseEnhancementTimeoutSeconds, parseOnOff } from
 
 type CommandServices = EnhancementServices;
 
-export async function handlePromptsmithCommand(
+export async function handleAugmentCommand(
   rawArgs: string,
   ctx: ExtensionCommandContext,
-  runtime: PromptsmithRuntimeState,
+  runtime: AugmentRuntimeState,
   services: CommandServices
 ): Promise<void> {
-  const command = parsePromptsmithCommand(rawArgs);
+  const command = parseAugmentCommand(rawArgs);
 
   try {
     switch (command.name) {
       case "":
         if (shouldOpenSettingsByDefault(ctx)) {
-          notify(ctx, "Editor is empty — opening Promptsmith settings.");
+          notify(ctx, "Editor is empty — opening Augment settings.");
           await openSettingsUi(ctx, runtime, services);
           return;
         }
@@ -61,7 +61,7 @@ export async function handlePromptsmithCommand(
           runtime,
           services,
           { ...runtime.getSettings(), enabled: true },
-          "Promptsmith enabled."
+          "Augment enabled."
         );
         return;
       case "disable":
@@ -70,7 +70,7 @@ export async function handlePromptsmithCommand(
           runtime,
           services,
           { ...runtime.getSettings(), enabled: false },
-          "Promptsmith disabled."
+          "Augment disabled."
         );
         return;
       case "family":
@@ -151,7 +151,7 @@ export async function handlePromptsmithCommand(
   }
 }
 
-export function parsePromptsmithCommand(rawArgs: string): ParsedPromptsmithCommand {
+export function parseAugmentCommand(rawArgs: string): ParsedAugmentCommand {
   const trimmed = rawArgs.trim();
   if (!trimmed) {
     return { name: "", args: [] };
@@ -164,7 +164,7 @@ export function parsePromptsmithCommand(rawArgs: string): ParsedPromptsmithComma
   };
 }
 
-export function getPromptsmithArgumentCompletions(
+export function getAugmentArgumentCompletions(
   prefix: string
 ): { value: string; label: string }[] | null {
   const options = [
@@ -199,7 +199,7 @@ function shouldOpenSettingsByDefault(ctx: ExtensionCommandContext): boolean {
 
 function handleUndo(
   ctx: ExtensionCommandContext,
-  runtime: PromptsmithRuntimeState,
+  runtime: AugmentRuntimeState,
   services: Pick<CommandServices, "refreshStatus">
 ): void {
   const support = detectRuntimeSupport(ctx);
@@ -209,23 +209,23 @@ function handleUndo(
 
   const previousDraft = runtime.undo.consume();
   if (!previousDraft) {
-    throw new Error("Promptsmith undo is not available.");
+    throw new Error("Augment undo is not available.");
   }
 
   ctx.ui.setEditorText(previousDraft);
   services.refreshStatus(ctx);
-  notify(ctx, "Promptsmith restored the previous draft.");
+  notify(ctx, "Augment restored the previous draft.");
 }
 
 function handleFamilyCommand(
-  command: ParsedPromptsmithCommand,
+  command: ParsedAugmentCommand,
   ctx: ExtensionCommandContext,
-  runtime: PromptsmithRuntimeState,
+  runtime: AugmentRuntimeState,
   services: CommandServices
 ): void {
   const family = command.args[0];
   if (family !== "auto" && family !== "gpt" && family !== "claude") {
-    throw new Error("Usage: /promptsmith family auto|gpt|claude");
+    throw new Error("Usage: /augment family auto|gpt|claude");
   }
 
   persistSettings(
@@ -238,14 +238,14 @@ function handleFamilyCommand(
 }
 
 function handleRewriteModeCommand(
-  command: ParsedPromptsmithCommand,
+  command: ParsedAugmentCommand,
   ctx: ExtensionCommandContext,
-  runtime: PromptsmithRuntimeState,
+  runtime: AugmentRuntimeState,
   services: CommandServices
 ): void {
   const rewriteMode = parseRewriteMode(command.args[0]);
   if (!rewriteMode) {
-    throw new Error("Usage: /promptsmith mode auto|plain|execution-contract");
+    throw new Error("Usage: /augment mode auto|plain|execution-contract");
   }
 
   persistSettings(
@@ -258,9 +258,9 @@ function handleRewriteModeCommand(
 }
 
 function handleEnhancerModelCommand(
-  command: ParsedPromptsmithCommand,
+  command: ParsedAugmentCommand,
   ctx: ExtensionCommandContext,
-  runtime: PromptsmithRuntimeState,
+  runtime: AugmentRuntimeState,
   services: CommandServices
 ): void {
   const mode = command.args[0];
@@ -279,7 +279,7 @@ function handleEnhancerModelCommand(
     case "fixed": {
       const modelRef = parseModelRef(command.args[1] ?? "");
       if (!modelRef) {
-        throw new Error("Usage: /promptsmith enhancer-model fixed <provider>/<id>");
+        throw new Error("Usage: /augment enhancer-model fixed <provider>/<id>");
       }
       persistSettings(
         ctx,
@@ -295,7 +295,7 @@ function handleEnhancerModelCommand(
       const claudeModel = parseModelRef(command.args[2] ?? "");
       if (!gptModel || !claudeModel) {
         throw new Error(
-          "Usage: /promptsmith enhancer-model family-linked <gpt-provider>/<gpt-id> <claude-provider>/<claude-id>"
+          "Usage: /augment enhancer-model family-linked <gpt-provider>/<gpt-id> <claude-provider>/<claude-id>"
         );
       }
       const next = setFamilyEnhancerModel(
@@ -308,15 +308,15 @@ function handleEnhancerModelCommand(
     }
     default:
       throw new Error(
-        "Usage: /promptsmith enhancer-model active|fixed <provider>/<id>|family-linked <gpt-provider>/<gpt-id> <claude-provider>/<claude-id>"
+        "Usage: /augment enhancer-model active|fixed <provider>/<id>|family-linked <gpt-provider>/<gpt-id> <claude-provider>/<claude-id>"
       );
   }
 }
 
 function handleMapCommand(
-  command: ParsedPromptsmithCommand,
+  command: ParsedAugmentCommand,
   ctx: ExtensionCommandContext,
-  runtime: PromptsmithRuntimeState,
+  runtime: AugmentRuntimeState,
   services: CommandServices
 ): void {
   const action = command.args[0];
@@ -326,10 +326,10 @@ function handleMapCommand(
     case "active": {
       const family = parseFamily(command.args[1]);
       if (!family) {
-        throw new Error("Usage: /promptsmith map active <gpt|claude>");
+        throw new Error("Usage: /augment map active <gpt|claude>");
       }
       if (!ctx.model) {
-        throw new Error("Promptsmith needs an active model for /promptsmith map active <family>.");
+        throw new Error("Augment needs an active model for /augment map active <family>.");
       }
       const next = upsertExactModelOverride(
         settings,
@@ -349,7 +349,7 @@ function handleMapCommand(
       const modelRef = parseModelRef(command.args[1] ?? "");
       const family = parseFamily(command.args[2]);
       if (!modelRef || !family) {
-        throw new Error("Usage: /promptsmith map set <provider>/<id> <gpt|claude>");
+        throw new Error("Usage: /augment map set <provider>/<id> <gpt|claude>");
       }
       const next = upsertExactModelOverride(settings, modelRef, family);
       persistSettings(
@@ -365,7 +365,7 @@ function handleMapCommand(
       const pattern = command.args[1]?.trim();
       const family = parseFamily(command.args[2]);
       if (!pattern || !family) {
-        throw new Error("Usage: /promptsmith map add <pattern> <gpt|claude>");
+        throw new Error("Usage: /augment map add <pattern> <gpt|claude>");
       }
       const next = upsertFamilyOverride(settings, pattern, family);
       persistSettings(ctx, runtime, services, next, `Pattern ${pattern} now routes to ${family}.`);
@@ -374,7 +374,7 @@ function handleMapCommand(
     case "remove": {
       const pattern = command.args[1]?.trim();
       if (!pattern) {
-        throw new Error("Usage: /promptsmith map remove <pattern>");
+        throw new Error("Usage: /augment map remove <pattern>");
       }
       const next = removeFamilyOverride(settings, pattern);
       persistSettings(ctx, runtime, services, next, `Removed pattern override ${pattern}.`);
@@ -382,36 +382,36 @@ function handleMapCommand(
     }
     default:
       throw new Error(
-        "Usage: /promptsmith map active <family> | set <provider>/<id> <family> | add <pattern> <family> | remove <pattern>"
+        "Usage: /augment map active <family> | set <provider>/<id> <family> | add <pattern> <family> | remove <pattern>"
       );
   }
 }
 
 function handleBooleanSettingCommand<K extends BooleanSettingKey>(
-  command: ParsedPromptsmithCommand,
+  command: ParsedAugmentCommand,
   ctx: ExtensionCommandContext,
-  runtime: PromptsmithRuntimeState,
+  runtime: AugmentRuntimeState,
   services: CommandServices,
   key: K,
   message: string
 ): void {
   const boolValue = parseOnOff(command.args[0] ?? "");
   if (boolValue === undefined) {
-    throw new Error(`Usage: /promptsmith ${command.name} on|off`);
+    throw new Error(`Usage: /augment ${command.name} on|off`);
   }
 
   persistSettings(ctx, runtime, services, { ...runtime.getSettings(), [key]: boolValue }, message);
 }
 
 function handleStrengthCommand(
-  command: ParsedPromptsmithCommand,
+  command: ParsedAugmentCommand,
   ctx: ExtensionCommandContext,
-  runtime: PromptsmithRuntimeState,
+  runtime: AugmentRuntimeState,
   services: CommandServices
 ): void {
   const strength = command.args[0];
   if (strength !== "light" && strength !== "balanced" && strength !== "strong") {
-    throw new Error("Usage: /promptsmith strength light|balanced|strong");
+    throw new Error("Usage: /augment strength light|balanced|strong");
   }
 
   persistSettings(
@@ -424,14 +424,14 @@ function handleStrengthCommand(
 }
 
 function handleTimeoutCommand(
-  command: ParsedPromptsmithCommand,
+  command: ParsedAugmentCommand,
   ctx: ExtensionCommandContext,
-  runtime: PromptsmithRuntimeState,
+  runtime: AugmentRuntimeState,
   services: CommandServices
 ): void {
   const timeoutMs = parseEnhancementTimeoutSeconds(command.args[0] ?? "");
   if (timeoutMs === undefined) {
-    throw new Error("Usage: /promptsmith timeout <seconds> (5-300)");
+    throw new Error("Usage: /augment timeout <seconds> (5-300)");
   }
 
   persistSettings(
@@ -443,11 +443,11 @@ function handleTimeoutCommand(
   );
 }
 
-function parseFamily(value: string | undefined): PromptsmithFamily | undefined {
+function parseFamily(value: string | undefined): AugmentFamily | undefined {
   return value === "gpt" || value === "claude" ? value : undefined;
 }
 
-function parseRewriteMode(value: string | undefined): PromptsmithRewriteMode | undefined {
+function parseRewriteMode(value: string | undefined): AugmentRewriteMode | undefined {
   return value === "auto" || value === "plain" || value === "execution-contract"
     ? value
     : undefined;
@@ -459,9 +459,9 @@ function formatTimeoutSeconds(timeoutMs: number): string {
 
 function persistSettings(
   ctx: ExtensionCommandContext,
-  runtime: PromptsmithRuntimeState,
+  runtime: AugmentRuntimeState,
   services: Pick<CommandServices, "refreshStatus">,
-  settings: PromptsmithSettings,
+  settings: AugmentSettings,
   successMessage: string
 ): void {
   runtime.persistSettings(settings);

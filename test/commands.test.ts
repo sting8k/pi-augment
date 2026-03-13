@@ -1,11 +1,11 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import {
-  getPromptsmithArgumentCompletions,
-  handlePromptsmithCommand,
-  parsePromptsmithCommand,
+  getAugmentArgumentCompletions,
+  handleAugmentCommand,
+  parseAugmentCommand,
 } from "../src/commands.js";
-import { handlePromptsmithShortcut } from "../src/shortcut.js";
+import { handleAugmentShortcut } from "../src/shortcut.js";
 import { openSettingsUi } from "../src/ui/settings.js";
 import {
   createAssistantEntry,
@@ -18,26 +18,26 @@ import {
   createUserEntry,
 } from "./helpers.js";
 
-void test("parsePromptsmithCommand splits command name and args", () => {
-  assert.deepEqual(parsePromptsmithCommand("map set openai/gpt-5 claude"), {
+void test("parseAugmentCommand splits command name and args", () => {
+  assert.deepEqual(parseAugmentCommand("map set openai/gpt-5 claude"), {
     name: "map",
     args: ["set", "openai/gpt-5", "claude"],
   });
-  assert.deepEqual(parsePromptsmithCommand("  "), { name: "", args: [] });
+  assert.deepEqual(parseAugmentCommand("  "), { name: "", args: [] });
 });
 
 void test("argument completions expose reset-settings", () => {
-  assert.deepEqual(getPromptsmithArgumentCompletions("reset-s"), [
+  assert.deepEqual(getAugmentArgumentCompletions("reset-s"), [
     { value: "reset-settings", label: "reset-settings" },
   ]);
 });
 
-void test("promptsmith command enhances the current editor draft", async () => {
+void test("augment command enhances the current editor draft", async () => {
   const runtime = createRuntimeState();
   const harness = createMockPi();
   const ctx = createCommandContext({ model: createModel(), editorText: "fix this prompt" });
 
-  await handlePromptsmithCommand(
+  await handleAugmentCommand(
     "",
     ctx,
     runtime,
@@ -57,15 +57,15 @@ void test("empty editor opens settings instead of failing", async () => {
     nextSelectValue: "done",
   });
 
-  await handlePromptsmithCommand(
+  await handleAugmentCommand(
     "",
     ctx,
     runtime,
     createServices(harness, () => Promise.resolve(createCompleteResponse("unused")))
   );
 
-  assert.deepEqual(ctx.uiState.customTitles, ["Promptsmith settings"]);
-  assert.match(ctx.uiState.notifications.at(0)?.message ?? "", /opening promptsmith settings/i);
+  assert.deepEqual(ctx.uiState.customTitles, ["Augment settings"]);
+  assert.match(ctx.uiState.notifications.at(0)?.message ?? "", /opening augment settings/i);
 });
 
 void test("shortcut with empty editor opens settings", async () => {
@@ -77,13 +77,13 @@ void test("shortcut with empty editor opens settings", async () => {
     nextSelectValue: "done",
   });
 
-  await handlePromptsmithShortcut(
+  await handleAugmentShortcut(
     ctx,
     runtime,
     createShortcutServices(harness, ctx, () => Promise.resolve(createCompleteResponse("unused")))
   );
 
-  assert.deepEqual(ctx.uiState.selectTitles, ["Promptsmith settings"]);
+  assert.deepEqual(ctx.uiState.selectTitles, ["Augment settings"]);
 });
 
 void test("shortcut expands Pi paste markers from the clipboard before enhancement", async () => {
@@ -95,7 +95,7 @@ void test("shortcut expands Pi paste markers from the clipboard before enhanceme
   const clipboardText = Array.from({ length: 12 }, (_, index) => `line ${index + 1}`).join("\n");
 
   let requestText = "";
-  await handlePromptsmithShortcut(ctx, runtime, {
+  await handleAugmentShortcut(ctx, runtime, {
     completeFn: (_model, context) => {
       const userMessage = context.messages[0];
       if (userMessage?.role === "user" && Array.isArray(userMessage.content)) {
@@ -129,7 +129,7 @@ void test("settings ui shows clearer labels and the footer status toggle", async
   assert.ok(firstMenu.some((option) => /Rewrite mode · Auto/i.test(option)));
 
   const initialRender = ctx.uiState.customRenderHistory[0]?.join("\n") ?? "";
-  assert.match(initialRender, /Master switch for \/promptsmith and Alt\+P/i);
+  assert.match(initialRender, /Master switch for \/augment and Alt\+P/i);
 });
 
 void test("default enhancement skips recent conversation context for speed", async () => {
@@ -142,7 +142,7 @@ void test("default enhancement skips recent conversation context for speed", asy
   });
 
   let requestText = "";
-  await handlePromptsmithCommand(
+  await handleAugmentCommand(
     "",
     ctx,
     runtime,
@@ -172,7 +172,7 @@ void test("preview mode uses the review editor before replacing text", async () 
 
   runtime.replaceSettings({ ...runtime.getSettings(), previewBeforeReplace: true });
 
-  await handlePromptsmithCommand(
+  await handleAugmentCommand(
     "",
     ctx,
     runtime,
@@ -187,7 +187,7 @@ void test("cancelled enhancement leaves the editor unchanged", async () => {
   const harness = createMockPi();
   const ctx = createCommandContext({ model: createModel(), editorText: "original draft" });
 
-  await handlePromptsmithCommand("", ctx, runtime, {
+  await handleAugmentCommand("", ctx, runtime, {
     ...createServices(harness, () => Promise.resolve(createCompleteResponse("unused"))),
     runCancellableTask: () => Promise.resolve(null),
   });
@@ -200,7 +200,7 @@ void test("failed enhancement leaves the editor unchanged", async () => {
   const harness = createMockPi();
   const ctx = createCommandContext({ model: createModel(), editorText: "original draft" });
 
-  await handlePromptsmithCommand("", ctx, runtime, {
+  await handleAugmentCommand("", ctx, runtime, {
     ...createServices(harness, () => Promise.resolve(createCompleteResponse("unused"))),
     runCancellableTask: () => Promise.reject(new Error("bad output")),
   });
@@ -216,7 +216,7 @@ void test("hung enhancement times out and leaves the editor unchanged", async ()
 
   runtime.replaceSettings({ ...runtime.getSettings(), enhancementTimeoutMs: 5 });
 
-  await handlePromptsmithCommand(
+  await handleAugmentCommand(
     "",
     ctx,
     runtime,
@@ -246,7 +246,7 @@ void test("mode command updates rewrite mode to execution-contract", async () =>
   const harness = createMockPi();
   const ctx = createCommandContext({ model: createModel() });
 
-  await handlePromptsmithCommand(
+  await handleAugmentCommand(
     "mode execution-contract",
     ctx,
     runtime,
@@ -262,7 +262,7 @@ void test("mode command updates rewrite mode to plain", async () => {
   const harness = createMockPi();
   const ctx = createCommandContext({ model: createModel() });
 
-  await handlePromptsmithCommand(
+  await handleAugmentCommand(
     "mode plain",
     ctx,
     runtime,
@@ -279,7 +279,7 @@ void test("mode command updates rewrite mode to auto", async () => {
 
   runtime.replaceSettings({ ...runtime.getSettings(), rewriteMode: "plain" });
 
-  await handlePromptsmithCommand(
+  await handleAugmentCommand(
     "mode auto",
     ctx,
     runtime,
@@ -294,7 +294,7 @@ void test("mode command rejects invalid values clearly", async () => {
   const harness = createMockPi();
   const ctx = createCommandContext({ model: createModel() });
 
-  await handlePromptsmithCommand(
+  await handleAugmentCommand(
     "mode noisy",
     ctx,
     runtime,
@@ -323,7 +323,7 @@ void test("enhancer-model active clears stale fixed and family-linked config", a
     },
   });
 
-  await handlePromptsmithCommand(
+  await handleAugmentCommand(
     "enhancer-model active",
     ctx,
     runtime,
@@ -349,7 +349,7 @@ void test("enhancer-model fixed clears stale family-linked config", async () => 
     },
   });
 
-  await handlePromptsmithCommand(
+  await handleAugmentCommand(
     "enhancer-model fixed openai/gpt-5",
     ctx,
     runtime,
@@ -366,7 +366,7 @@ void test("status-bar command updates the saved footer status setting", async ()
   const harness = createMockPi();
   const ctx = createCommandContext({ model: createModel() });
 
-  await handlePromptsmithCommand(
+  await handleAugmentCommand(
     "status-bar on",
     ctx,
     runtime,
@@ -382,7 +382,7 @@ void test("timeout command updates the saved project setting", async () => {
   const harness = createMockPi();
   const ctx = createCommandContext({ model: createModel() });
 
-  await handlePromptsmithCommand(
+  await handleAugmentCommand(
     "timeout 12",
     ctx,
     runtime,
@@ -398,7 +398,7 @@ void test("timeout command rejects values outside the supported range", async ()
   const harness = createMockPi();
   const ctx = createCommandContext({ model: createModel() });
 
-  await handlePromptsmithCommand(
+  await handleAugmentCommand(
     "timeout 4",
     ctx,
     runtime,
@@ -417,10 +417,10 @@ void test("undo restores the previous draft after successful enhancement", async
     Promise.resolve(createCompleteResponse("second draft"))
   );
 
-  await handlePromptsmithCommand("", ctx, runtime, services);
+  await handleAugmentCommand("", ctx, runtime, services);
   assert.equal(ctx.uiState.editorText, "second draft");
 
-  await handlePromptsmithCommand("undo", ctx, runtime, services);
+  await handleAugmentCommand("undo", ctx, runtime, services);
   assert.equal(ctx.uiState.editorText, "first draft");
 });
 
@@ -439,9 +439,9 @@ void test("second enhancement request while busy is rejected", async () => {
     runCancellableTask: () => firstTask,
   };
 
-  const firstPromise = handlePromptsmithCommand("", ctx, runtime, services);
+  const firstPromise = handleAugmentCommand("", ctx, runtime, services);
   await Promise.resolve();
-  await handlePromptsmithCommand("", ctx, runtime, services);
+  await handleAugmentCommand("", ctx, runtime, services);
   resolveFirst?.("done");
   await firstPromise;
 
@@ -460,7 +460,7 @@ void test("theme enumeration alone does not block enhancement", async () => {
     themeCount: 0,
   });
 
-  await handlePromptsmithCommand("", ctx, runtime, {
+  await handleAugmentCommand("", ctx, runtime, {
     ...createServices(harness, () => Promise.resolve(createCompleteResponse("Enhanced prompt"))),
     runCancellableTask: createRunTaskStub("__RUN_TASK__"),
   });
@@ -484,7 +484,7 @@ void test("reset-settings restores default settings", async () => {
     enhancementTimeoutMs: 12_000,
   });
 
-  await handlePromptsmithCommand(
+  await handleAugmentCommand(
     "reset-settings",
     ctx,
     runtime,
@@ -513,7 +513,7 @@ void test("shortcut starts enhancement without waiting for a timer tick", async 
   }) as typeof globalThis.setTimeout;
 
   try {
-    await handlePromptsmithShortcut(
+    await handleAugmentShortcut(
       ctx,
       runtime,
       createShortcutServices(harness, ctx, () =>
@@ -534,7 +534,7 @@ void test("shortcut respects enabled and shortcutEnabled settings", async () => 
   const ctx = createCommandContext({ model: createModel(), editorText: "draft" });
 
   runtime.replaceSettings({ ...runtime.getSettings(), enabled: false });
-  await handlePromptsmithShortcut(
+  await handleAugmentShortcut(
     ctx,
     runtime,
     createShortcutServices(harness, ctx, () => Promise.resolve(createCompleteResponse("unused")))
@@ -542,7 +542,7 @@ void test("shortcut respects enabled and shortcutEnabled settings", async () => 
   assert.match(ctx.uiState.notifications.at(-1)?.message ?? "", /disabled/);
 
   runtime.replaceSettings({ ...runtime.getSettings(), enabled: true, shortcutEnabled: false });
-  await handlePromptsmithShortcut(
+  await handleAugmentShortcut(
     ctx,
     runtime,
     createShortcutServices(harness, ctx, () => Promise.resolve(createCompleteResponse("unused")))
@@ -552,9 +552,9 @@ void test("shortcut respects enabled and shortcutEnabled settings", async () => 
 
 function createServices(
   harness: ReturnType<typeof createMockPi>,
-  completeFn: Parameters<typeof handlePromptsmithCommand>[3]["completeFn"],
-  overrides: Partial<Parameters<typeof handlePromptsmithCommand>[3]> = {}
-): Parameters<typeof handlePromptsmithCommand>[3] {
+  completeFn: Parameters<typeof handleAugmentCommand>[3]["completeFn"],
+  overrides: Partial<Parameters<typeof handleAugmentCommand>[3]> = {}
+): Parameters<typeof handleAugmentCommand>[3] {
   return {
     completeFn,
     exec: harness.pi.exec.bind(harness.pi),
@@ -567,13 +567,13 @@ function createServices(
 function createShortcutServices(
   harness: ReturnType<typeof createMockPi>,
   ctx: ReturnType<typeof createCommandContext>,
-  completeFn: Parameters<typeof handlePromptsmithShortcut>[2]["completeFn"]
-): Parameters<typeof handlePromptsmithShortcut>[2] {
+  completeFn: Parameters<typeof handleAugmentShortcut>[2]["completeFn"]
+): Parameters<typeof handleAugmentShortcut>[2] {
   return {
     completeFn,
     exec: harness.pi.exec.bind(harness.pi),
     refreshStatus: () => undefined,
     runCancellableTask: (_ctx, _message, task) => task(new AbortController().signal),
-    openSettings: () => ctx.ui.select("Promptsmith settings", ["Done"]).then(() => undefined),
+    openSettings: () => ctx.ui.select("Augment settings", ["Done"]).then(() => undefined),
   };
 }

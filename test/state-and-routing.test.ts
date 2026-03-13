@@ -12,7 +12,7 @@ import {
   upsertExactModelOverride,
   upsertFamilyOverride,
 } from "../src/overrides.js";
-import { PromptsmithRuntimeState, sanitizeSettings } from "../src/state.js";
+import { AugmentRuntimeState, sanitizeSettings } from "../src/state.js";
 import { detectRuntimeSupport } from "../src/validation.js";
 import { createCommandContext, createModel, createRuntimeState } from "./helpers.js";
 
@@ -195,9 +195,9 @@ void test("setFamilyEnhancerModel clears orphaned partial family selections", ()
 });
 
 void test("settings persist across sessions globally", () => {
-  const storageDir = mkdtempSync(join(tmpdir(), "promptsmith-state-"));
-  const settingsPath = join(storageDir, "promptsmith-settings.json");
-  const runtime = new PromptsmithRuntimeState(settingsPath);
+  const storageDir = mkdtempSync(join(tmpdir(), "augment-state-"));
+  const settingsPath = join(storageDir, "augment-settings.json");
+  const runtime = new AugmentRuntimeState(settingsPath);
 
   runtime.persistSettings({
     ...runtime.getSettings(),
@@ -207,7 +207,7 @@ void test("settings persist across sessions globally", () => {
     enhancementTimeoutMs: 12_000,
   });
 
-  const restoredRuntime = new PromptsmithRuntimeState(settingsPath);
+  const restoredRuntime = new AugmentRuntimeState(settingsPath);
   restoredRuntime.restoreSettings();
 
   assert.equal(restoredRuntime.getSettings().enabled, false);
@@ -217,10 +217,10 @@ void test("settings persist across sessions globally", () => {
 });
 
 void test("failed global settings writes do not claim success or corrupt runtime state", () => {
-  const tempDir = mkdtempSync(join(tmpdir(), "promptsmith-state-"));
+  const tempDir = mkdtempSync(join(tmpdir(), "augment-state-"));
   const filePath = join(tempDir, "not-a-directory");
   writeFileSync(filePath, "x", "utf8");
-  const runtime = new PromptsmithRuntimeState(join(filePath, "promptsmith-settings.json"));
+  const runtime = new AugmentRuntimeState(join(filePath, "augment-settings.json"));
   const previousSettings = runtime.getSettings();
 
   assert.throws(() => {

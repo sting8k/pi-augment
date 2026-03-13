@@ -8,26 +8,26 @@ export function parseEnhancedPrompt(responseText: string): string {
 
   if (matches.length !== 1) {
     throw new Error(
-      "Promptsmith received invalid model output: expected exactly one sentinel block."
+      "Augment received invalid model output: expected exactly one sentinel block."
     );
   }
 
   const match = matches[0];
   if (!match) {
-    throw new Error("Promptsmith received invalid model output: missing sentinel block.");
+    throw new Error("Augment received invalid model output: missing sentinel block.");
   }
 
   const before = responseText.slice(0, match.index ?? 0).trim();
   const after = responseText.slice((match.index ?? 0) + match[0].length).trim();
   if (before || after) {
     throw new Error(
-      "Promptsmith received invalid model output: unexpected text outside the sentinel block."
+      "Augment received invalid model output: unexpected text outside the sentinel block."
     );
   }
 
   const extracted = normalizePromptText(match[1] ?? "");
   if (!extracted.trim()) {
-    throw new Error("Promptsmith received an empty enhanced prompt.");
+    throw new Error("Augment received an empty enhanced prompt.");
   }
 
   return extracted;

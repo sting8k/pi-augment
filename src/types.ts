@@ -1,13 +1,13 @@
 import type { Api, Context, Model } from "@mariozechner/pi-ai";
 import type { ExtensionContext } from "@mariozechner/pi-coding-agent";
 
-export type PromptsmithFamily = "gpt" | "claude";
-export type PromptsmithTargetFamilyMode = "auto" | PromptsmithFamily;
-export type PromptsmithEnhancerModelMode = "active" | "fixed" | "family-linked";
-export type PromptsmithRewriteStrength = "light" | "balanced" | "strong";
-export type PromptsmithRewriteMode = "auto" | "plain" | "execution-contract";
-export type PromptsmithEffectiveRewriteMode = Exclude<PromptsmithRewriteMode, "auto">;
-export type PromptsmithTaskIntent =
+export type AugmentFamily = "gpt" | "claude";
+export type AugmentTargetFamilyMode = "auto" | AugmentFamily;
+export type AugmentEnhancerModelMode = "active" | "fixed" | "family-linked";
+export type AugmentRewriteStrength = "light" | "balanced" | "strong";
+export type AugmentRewriteMode = "auto" | "plain" | "execution-contract";
+export type AugmentEffectiveRewriteMode = Exclude<AugmentRewriteMode, "auto">;
+export type AugmentTaskIntent =
   | "implement"
   | "debug"
   | "refactor"
@@ -24,12 +24,12 @@ export interface ModelRef {
 }
 
 export interface ExactModelOverride extends ModelRef {
-  family: PromptsmithFamily;
+  family: AugmentFamily;
 }
 
 export interface FamilyOverride {
   pattern: string;
-  family: PromptsmithFamily;
+  family: AugmentFamily;
 }
 
 export interface FamilyEnhancerModels {
@@ -37,36 +37,36 @@ export interface FamilyEnhancerModels {
   claude?: ModelRef;
 }
 
-export interface PromptsmithSettings {
+export interface AugmentSettings {
   version: 1;
   enabled: boolean;
   shortcutEnabled: boolean;
-  targetFamilyMode: PromptsmithTargetFamilyMode;
-  fallbackFamily: PromptsmithFamily;
+  targetFamilyMode: AugmentTargetFamilyMode;
+  fallbackFamily: AugmentFamily;
   exactModelOverrides: ExactModelOverride[];
   familyOverrides: FamilyOverride[];
-  enhancerModelMode: PromptsmithEnhancerModelMode;
+  enhancerModelMode: AugmentEnhancerModelMode;
   fixedEnhancerModel?: ModelRef;
   familyEnhancerModels?: FamilyEnhancerModels;
   includeRecentConversation: boolean;
   includeProjectMetadata: boolean;
   statusBarEnabled: boolean;
-  rewriteStrength: PromptsmithRewriteStrength;
-  rewriteMode: PromptsmithRewriteMode;
+  rewriteStrength: AugmentRewriteStrength;
+  rewriteMode: AugmentRewriteMode;
   previewBeforeReplace: boolean;
   preserveCodeBlocks: boolean;
   enhancementTimeoutMs: number;
 }
 
 export interface ResolvedTargetFamily {
-  family: PromptsmithFamily;
+  family: AugmentFamily;
   source: "forced" | "exact-override" | "pattern-override" | "builtin" | "fallback";
   matchedRule?: string;
 }
 
 export interface ResolvedEnhancerModel {
-  mode: PromptsmithEnhancerModelMode;
-  family: PromptsmithFamily;
+  mode: AugmentEnhancerModelMode;
+  family: AugmentFamily;
   model: Model<Api>;
   apiKey: string;
   label: string;
@@ -84,14 +84,14 @@ export interface ProjectMetadata {
   gitBranch?: string;
 }
 
-export interface PromptsmithContextPayload {
+export interface AugmentContextPayload {
   draft: string;
   activeModel?: ModelRef;
-  targetFamily: PromptsmithFamily;
-  rewriteStrength: PromptsmithRewriteStrength;
-  configuredRewriteMode: PromptsmithRewriteMode;
-  effectiveRewriteMode: PromptsmithEffectiveRewriteMode;
-  intent: PromptsmithTaskIntent;
+  targetFamily: AugmentFamily;
+  rewriteStrength: AugmentRewriteStrength;
+  configuredRewriteMode: AugmentRewriteMode;
+  effectiveRewriteMode: AugmentEffectiveRewriteMode;
+  intent: AugmentTaskIntent;
   preserveCodeBlocks: boolean;
   recentConversation: ConversationExcerpt[];
   projectMetadata?: ProjectMetadata;
@@ -101,32 +101,32 @@ export interface PromptsmithContextPayload {
 export interface EnhancementPreparation {
   resolvedTargetFamily: ResolvedTargetFamily;
   enhancerModel: ResolvedEnhancerModel;
-  promptContext: PromptsmithContextPayload;
+  promptContext: AugmentContextPayload;
   request: Context;
 }
 
-export interface PromptsmithDraftResolution {
-  intent: PromptsmithTaskIntent;
-  effectiveRewriteMode: PromptsmithEffectiveRewriteMode;
+export interface AugmentDraftResolution {
+  intent: AugmentTaskIntent;
+  effectiveRewriteMode: AugmentEffectiveRewriteMode;
 }
 
-export interface PromptsmithStatusSnapshot {
-  settings: PromptsmithSettings;
+export interface AugmentStatusSnapshot {
+  settings: AugmentSettings;
   activeModel?: ModelRef;
   resolvedTargetFamily?: ResolvedTargetFamily;
   enhancerModeLabel: string;
   busy: boolean;
   undoAvailable: boolean;
-  currentDraftResolution?: PromptsmithDraftResolution;
-  lastDraftResolution?: PromptsmithDraftResolution;
+  currentDraftResolution?: AugmentDraftResolution;
+  lastDraftResolution?: AugmentDraftResolution;
 }
 
-export interface PromptsmithRuntimeSupport {
+export interface AugmentRuntimeSupport {
   interactiveTui: boolean;
   reason?: string;
 }
 
-export interface ParsedPromptsmithCommand {
+export interface ParsedAugmentCommand {
   name: string;
   args: string[];
 }
@@ -134,9 +134,9 @@ export interface ParsedPromptsmithCommand {
 export interface BuildPromptContextOptions {
   ctx: ExtensionContext;
   draft: string;
-  settings: PromptsmithSettings;
+  settings: AugmentSettings;
   activeModel: Model<Api> | undefined;
-  targetFamily: PromptsmithFamily;
+  targetFamily: AugmentFamily;
   enhancerModel: Model<Api>;
   exec: (
     command: string,

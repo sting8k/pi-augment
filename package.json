@@ -1,5 +1,5 @@
 {
-  "name": "pi-promptsmith",
+  "name": "pi-augment",
   "version": "0.2.1",
   "description": "Intent-aware prompt rewriter and execution-contract compiler for Pi",
   "keywords": [
@@ -34,15 +34,15 @@
     "extensions": [
       "./src/index.ts"
     ],
-    "image": "https://raw.githubusercontent.com/ayagmar/pi-promptsmith/main/promptsmith.gif"
+    "image": "https://raw.githubusercontent.com/ayagmar/pi-augment/main/promptsmith.gif"
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/ayagmar/pi-promptsmith.git"
+    "url": "git+https://github.com/ayagmar/pi-augment.git"
   },
-  "homepage": "https://github.com/ayagmar/pi-promptsmith#readme",
+  "homepage": "https://github.com/ayagmar/pi-augment#readme",
   "bugs": {
-    "url": "https://github.com/ayagmar/pi-promptsmith/issues"
+    "url": "https://github.com/ayagmar/pi-augment/issues"
   },
   "peerDependencies": {
     "@mariozechner/pi-ai": "*",

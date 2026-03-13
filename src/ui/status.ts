@@ -3,11 +3,11 @@ import { EXTENSION_COMMAND, EXTENSION_NAME, MAX_STATUS_MODEL_ID_LENGTH } from ".
 import { buildEnhancerModeLabel } from "../enhance.js";
 import { analyzeDraftIntent } from "../intent.js";
 import { describeResolvedFamily, resolveTargetFamily } from "../model-routing.js";
-import type { PromptsmithRuntimeState } from "../state.js";
-import type { PromptsmithStatusSnapshot } from "../types.js";
+import type { AugmentRuntimeState } from "../state.js";
+import type { AugmentStatusSnapshot } from "../types.js";
 import { detectRuntimeSupport } from "../validation.js";
 
-export function refreshStatusLine(ctx: ExtensionContext, runtime: PromptsmithRuntimeState): void {
+export function refreshStatusLine(ctx: ExtensionContext, runtime: AugmentRuntimeState): void {
   if (!ctx.hasUI) {
     return;
   }
@@ -20,7 +20,7 @@ export function refreshStatusLine(ctx: ExtensionContext, runtime: PromptsmithRun
   ctx.ui.setStatus(EXTENSION_COMMAND, buildStatusLine(createStatusSnapshot(ctx, runtime)));
 }
 
-export function buildStatusLine(snapshot: PromptsmithStatusSnapshot): string {
+export function buildStatusLine(snapshot: AugmentStatusSnapshot): string {
   if (!snapshot.settings.enabled) {
     return `${EXTENSION_NAME}: disabled`;
   }
@@ -33,10 +33,10 @@ export function buildStatusLine(snapshot: PromptsmithStatusSnapshot): string {
     ? `${snapshot.settings.rewriteMode} → ${snapshot.currentDraftResolution.effectiveRewriteMode}/${snapshot.currentDraftResolution.intent}`
     : snapshot.settings.rewriteMode;
   const undo = snapshot.undoAvailable ? " | undo: ready" : "";
-  return `${busyPrefix}Promptsmith: ${family} | mode: ${rewriteMode} | enhancer: ${truncate(snapshot.enhancerModeLabel)}${undo}`;
+  return `${busyPrefix}Augment: ${family} | mode: ${rewriteMode} | enhancer: ${truncate(snapshot.enhancerModeLabel)}${undo}`;
 }
 
-export function buildStatusReport(ctx: ExtensionContext, runtime: PromptsmithRuntimeState): string {
+export function buildStatusReport(ctx: ExtensionContext, runtime: AugmentRuntimeState): string {
   const snapshot = createStatusSnapshot(ctx, runtime);
   const settings = snapshot.settings;
   const activeModel = snapshot.activeModel
@@ -87,8 +87,8 @@ export function buildStatusReport(ctx: ExtensionContext, runtime: PromptsmithRun
 
 function createStatusSnapshot(
   ctx: ExtensionContext,
-  runtime: PromptsmithRuntimeState
-): PromptsmithStatusSnapshot {
+  runtime: AugmentRuntimeState
+): AugmentStatusSnapshot {
   const settings = runtime.getSettings();
   const support = detectRuntimeSupport(ctx);
   const draft = support.interactiveTui ? ctx.ui.getEditorText().trim() : "";

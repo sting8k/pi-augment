@@ -1,17 +1,17 @@
 import type {
-  PromptsmithEffectiveRewriteMode,
-  PromptsmithRewriteMode,
-  PromptsmithTaskIntent,
+  AugmentEffectiveRewriteMode,
+  AugmentRewriteMode,
+  AugmentTaskIntent,
 } from "./types.js";
 
 export interface IntentMatchRule {
-  intent: PromptsmithTaskIntent;
+  intent: AugmentTaskIntent;
   patterns: RegExp[];
 }
 
 export interface DraftIntentAnalysis {
-  intent: PromptsmithTaskIntent;
-  effectiveRewriteMode: PromptsmithEffectiveRewriteMode;
+  intent: AugmentTaskIntent;
+  effectiveRewriteMode: AugmentEffectiveRewriteMode;
 }
 
 const REVIEW_RULE: IntentMatchRule = {
@@ -152,7 +152,7 @@ const CODE_SURFACE_PATTERNS = [
   /\bmodel\b/,
   /\beditor\b/,
   /\bsession\b/,
-  /\bpromptsmith\b/,
+  /\baugment\b/,
   /\bpi\b/,
   /(?:^|\s)(?:\.{1,2}\/|\/)[\w./-]+/,
   /\b[\w./-]+\.(?:ts|tsx|js|jsx|mjs|cjs|json|md|java|kt|py|go|rs|rb|php|swift|sql|yaml|yml)\b/,
@@ -181,7 +181,7 @@ const STRONG_INTENT_RULES: IntentMatchRule[] = [
   RESEARCH_RULE,
 ];
 
-const EXECUTION_CONTRACT_INTENTS = new Set<PromptsmithTaskIntent>([
+const EXECUTION_CONTRACT_INTENTS = new Set<AugmentTaskIntent>([
   "implement",
   "debug",
   "refactor",
@@ -191,7 +191,7 @@ const EXECUTION_CONTRACT_INTENTS = new Set<PromptsmithTaskIntent>([
   "test-fix",
 ]);
 
-export function detectTaskIntent(draft: string): PromptsmithTaskIntent {
+export function detectTaskIntent(draft: string): AugmentTaskIntent {
   const normalizedDraft = normalizeDraft(draft);
   if (!normalizedDraft) {
     return "general";
@@ -245,9 +245,9 @@ export function detectTaskIntent(draft: string): PromptsmithTaskIntent {
 }
 
 export function resolveEffectiveRewriteMode(
-  configuredMode: PromptsmithRewriteMode,
-  intent: PromptsmithTaskIntent
-): PromptsmithEffectiveRewriteMode {
+  configuredMode: AugmentRewriteMode,
+  intent: AugmentTaskIntent
+): AugmentEffectiveRewriteMode {
   if (configuredMode === "plain") {
     return "plain";
   }
@@ -261,7 +261,7 @@ export function resolveEffectiveRewriteMode(
 
 export function analyzeDraftIntent(
   draft: string,
-  configuredMode: PromptsmithRewriteMode
+  configuredMode: AugmentRewriteMode
 ): DraftIntentAnalysis {
   const intent = detectTaskIntent(draft);
   return {

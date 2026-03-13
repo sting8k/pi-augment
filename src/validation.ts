@@ -1,29 +1,29 @@
 import type { ExtensionContext } from "@mariozechner/pi-coding-agent";
 import { MAX_ENHANCEMENT_TIMEOUT_MS, MIN_ENHANCEMENT_TIMEOUT_MS } from "./constants.js";
-import type { PromptsmithRuntimeSupport, PromptsmithSettings } from "./types.js";
+import type { AugmentRuntimeSupport, AugmentSettings } from "./types.js";
 
-export function detectRuntimeSupport(ctx: ExtensionContext): PromptsmithRuntimeSupport {
+export function detectRuntimeSupport(ctx: ExtensionContext): AugmentRuntimeSupport {
   if (!ctx.hasUI) {
     return {
       interactiveTui: false,
-      reason: "Promptsmith editor actions require Pi interactive mode.",
+      reason: "Augment editor actions require Pi interactive mode.",
     };
   }
 
   return { interactiveTui: true };
 }
 
-export function ensureEnhancementEnabled(settings: PromptsmithSettings): void {
+export function ensureEnhancementEnabled(settings: AugmentSettings): void {
   if (!settings.enabled) {
     throw new Error(
-      "Promptsmith is disabled globally. Use /promptsmith enable to turn it back on."
+      "Augment is disabled globally. Use /augment enable to turn it back on."
     );
   }
 }
 
 export function requireNonEmptyDraft(draft: string): void {
   if (!draft.trim()) {
-    throw new Error("Promptsmith needs a non-empty editor draft.");
+    throw new Error("Augment needs a non-empty editor draft.");
   }
 }
 

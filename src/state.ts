@@ -13,29 +13,29 @@ import type {
   FamilyEnhancerModels,
   FamilyOverride,
   ModelRef,
-  PromptsmithDraftResolution,
-  PromptsmithSettings,
+  AugmentDraftResolution,
+  AugmentSettings,
 } from "./types.js";
 import { UndoManager } from "./undo.js";
 
-export class PromptsmithRuntimeState {
-  private settings: PromptsmithSettings = cloneSettings(DEFAULT_SETTINGS);
+export class AugmentRuntimeState {
+  private settings: AugmentSettings = cloneSettings(DEFAULT_SETTINGS);
   private busy = false;
-  private lastDraftResolution: PromptsmithDraftResolution | undefined;
+  private lastDraftResolution: AugmentDraftResolution | undefined;
   readonly undo = new UndoManager();
 
   constructor(private readonly settingsPath = getGlobalSettingsPath()) {}
 
-  getSettings(): PromptsmithSettings {
+  getSettings(): AugmentSettings {
     return cloneSettings(this.settings);
   }
 
-  replaceSettings(settings: PromptsmithSettings): void {
+  replaceSettings(settings: AugmentSettings): void {
     this.settings = cloneSettings(settings);
     this.lastDraftResolution = undefined;
   }
 
-  persistSettings(settings: PromptsmithSettings): void {
+  persistSettings(settings: AugmentSettings): void {
     const nextSettings = cloneSettings(settings);
     writeSettingsToDisk(this.settingsPath, nextSettings);
     this.replaceSettings(nextSettings);
@@ -48,11 +48,11 @@ export class PromptsmithRuntimeState {
     this.undo.clear();
   }
 
-  getLastDraftResolution(): PromptsmithDraftResolution | undefined {
+  getLastDraftResolution(): AugmentDraftResolution | undefined {
     return this.lastDraftResolution ? { ...this.lastDraftResolution } : undefined;
   }
 
-  rememberDraftResolution(resolution: PromptsmithDraftResolution): void {
+  rememberDraftResolution(resolution: AugmentDraftResolution): void {
     this.lastDraftResolution = { ...resolution };
   }
 
@@ -72,10 +72,10 @@ export class PromptsmithRuntimeState {
 }
 
 function getGlobalSettingsPath(): string {
-  return join(homedir(), ".pi", "agent", "promptsmith-settings.json");
+  return join(homedir(), ".pi", "agent", "augment-settings.json");
 }
 
-function restoreSettingsFromDisk(path: string): PromptsmithSettings | undefined {
+function restoreSettingsFromDisk(path: string): AugmentSettings | undefined {
   try {
     const raw = readFileSync(path, "utf8");
     return sanitizeSettings(JSON.parse(raw));
@@ -84,7 +84,7 @@ function restoreSettingsFromDisk(path: string): PromptsmithSettings | undefined 
   }
 }
 
-export function sanitizeSettings(value: unknown): PromptsmithSettings | undefined {
+export function sanitizeSettings(value: unknown): AugmentSettings | undefined {
   if (!isRecord(value)) return undefined;
   if (value.version !== DEFAULT_SETTINGS.version) return undefined;
 
@@ -122,7 +122,7 @@ export function sanitizeSettings(value: unknown): PromptsmithSettings | undefine
   };
 }
 
-export function cloneSettings(settings: PromptsmithSettings): PromptsmithSettings {
+export function cloneSettings(settings: AugmentSettings): AugmentSettings {
   return {
     ...settings,
     exactModelOverrides: settings.exactModelOverrides.map((entry) => ({ ...entry })),
@@ -145,7 +145,7 @@ export function cloneSettings(settings: PromptsmithSettings): PromptsmithSetting
   };
 }
 
-function writeSettingsToDisk(path: string, settings: PromptsmithSettings): void {
+function writeSettingsToDisk(path: string, settings: AugmentSettings): void {
   mkdirSync(dirname(path), { recursive: true });
   writeFileSync(path, `${JSON.stringify(settings, null, 2)}\n`, "utf8");
 }
@@ -242,25 +242,25 @@ function readFamily<TFallback extends string | undefined>(
   return value === "gpt" || value === "claude" ? value : fallback;
 }
 
-function readTargetFamilyMode(value: unknown): PromptsmithSettings["targetFamilyMode"] {
+function readTargetFamilyMode(value: unknown): AugmentSettings["targetFamilyMode"] {
   return value === "auto" || value === "gpt" || value === "claude"
     ? value
     : DEFAULT_SETTINGS.targetFamilyMode;
 }
 
-function readEnhancerModelMode(value: unknown): PromptsmithSettings["enhancerModelMode"] {
+function readEnhancerModelMode(value: unknown): AugmentSettings["enhancerModelMode"] {
   return value === "active" || value === "fixed" || value === "family-linked"
     ? value
     : DEFAULT_SETTINGS.enhancerModelMode;
 }
 
-function readRewriteStrength(value: unknown): PromptsmithSettings["rewriteStrength"] {
+function readRewriteStrength(value: unknown): AugmentSettings["rewriteStrength"] {
   return value === "light" || value === "balanced" || value === "strong"
     ? value
     : DEFAULT_SETTINGS.rewriteStrength;
 }
 
-function readRewriteMode(value: unknown): PromptsmithSettings["rewriteMode"] {
+function readRewriteMode(value: unknown): AugmentSettings["rewriteMode"] {
   return value === "auto" || value === "plain" || value === "execution-contract"
     ? value
     : DEFAULT_SETTINGS.rewriteMode;

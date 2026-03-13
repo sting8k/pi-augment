@@ -9,7 +9,7 @@ import type {
   SessionEntry,
 } from "@mariozechner/pi-coding-agent";
 import { SENTINEL_CLOSE, SENTINEL_OPEN } from "../src/constants.js";
-import { PromptsmithRuntimeState } from "../src/state.js";
+import { AugmentRuntimeState } from "../src/state.js";
 
 export interface MockPiHarness {
   pi: ExtensionAPI;
@@ -66,9 +66,9 @@ export function createMockPi(): MockPiHarness {
   return { pi, commands, shortcuts, events };
 }
 
-export function createRuntimeState(): PromptsmithRuntimeState {
-  return new PromptsmithRuntimeState(
-    join(mkdtempSync(join(tmpdir(), "promptsmith-test-state-")), "promptsmith-settings.json")
+export function createRuntimeState(): AugmentRuntimeState {
+  return new AugmentRuntimeState(
+    join(mkdtempSync(join(tmpdir(), "augment-test-state-")), "augment-settings.json")
   );
 }
 

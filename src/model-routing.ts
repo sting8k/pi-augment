@@ -1,8 +1,8 @@
 import type { Api, Model } from "@mariozechner/pi-ai";
-import type { PromptsmithSettings, ResolvedTargetFamily } from "./types.js";
+import type { AugmentSettings, ResolvedTargetFamily } from "./types.js";
 
 export function resolveTargetFamily(
-  settings: PromptsmithSettings,
+  settings: AugmentSettings,
   activeModel: Model<Api> | undefined
 ): ResolvedTargetFamily {
   if (settings.targetFamilyMode !== "auto") {
@@ -79,7 +79,7 @@ function globToRegExp(pattern: string): RegExp {
 
 export function describeResolvedFamily(
   resolved: ResolvedTargetFamily,
-  mode: PromptsmithSettings["targetFamilyMode"]
+  mode: AugmentSettings["targetFamilyMode"]
 ): string {
   return mode === "auto" ? `auto→${resolved.family}` : resolved.family;
 }

@@ -2,22 +2,22 @@ import { complete } from "@mariozechner/pi-ai";
 import type { ExtensionAPI, ExtensionContext } from "@mariozechner/pi-coding-agent";
 import type { CompleteFn } from "./enhance.js";
 import { EXTENSION_COMMAND, SHORTCUT_KEY } from "./constants.js";
-import { getPromptsmithArgumentCompletions, handlePromptsmithCommand } from "./commands.js";
-import { PromptsmithRuntimeState } from "./state.js";
-import { handlePromptsmithShortcut } from "./shortcut.js";
+import { getAugmentArgumentCompletions, handleAugmentCommand } from "./commands.js";
+import { AugmentRuntimeState } from "./state.js";
+import { handleAugmentShortcut } from "./shortcut.js";
 import { runEnhancementWithLoader } from "./enhance.js";
 import { openSettingsUi } from "./ui/settings.js";
 import { refreshStatusLine } from "./ui/status.js";
 
-export default function promptsmithExtension(pi: ExtensionAPI): void {
-  createPromptsmithExtension(pi);
+export default function augmentExtension(pi: ExtensionAPI): void {
+  createAugmentExtension(pi);
 }
 
-export function createPromptsmithExtension(
+export function createAugmentExtension(
   pi: ExtensionAPI,
   options?: { completeFn?: CompleteFn }
 ): void {
-  const runtime = new PromptsmithRuntimeState();
+  const runtime = new AugmentRuntimeState();
 
   const refreshStatus = (ctx: ExtensionContext): void => {
     refreshStatusLine(ctx, runtime);
@@ -46,9 +46,9 @@ export function createPromptsmithExtension(
 
   pi.registerCommand(EXTENSION_COMMAND, {
     description: "Enhance the current editor prompt in-place",
-    getArgumentCompletions: getPromptsmithArgumentCompletions,
+    getArgumentCompletions: getAugmentArgumentCompletions,
     handler: async (args, ctx) => {
-      await handlePromptsmithCommand(args, ctx, runtime, {
+      await handleAugmentCommand(args, ctx, runtime, {
         completeFn: options?.completeFn ?? complete,
         exec: pi.exec.bind(pi),
         refreshStatus,
@@ -60,7 +60,7 @@ export function createPromptsmithExtension(
   pi.registerShortcut(SHORTCUT_KEY, {
     description: "Enhance the current editor prompt",
     handler: async (ctx) => {
-      await handlePromptsmithShortcut(ctx, runtime, {
+      await handleAugmentShortcut(ctx, runtime, {
         completeFn: options?.completeFn ?? complete,
         exec: pi.exec.bind(pi),
         refreshStatus,

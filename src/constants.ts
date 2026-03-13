@@ -1,13 +1,13 @@
-import type { PromptsmithSettings } from "./types.js";
+import type { AugmentSettings } from "./types.js";
 
-export const EXTENSION_NAME = "pi-promptsmith";
-export const EXTENSION_COMMAND = "promptsmith";
+export const EXTENSION_NAME = "pi-augment";
+export const EXTENSION_COMMAND = "augment";
 // Avoid Pi built-ins and common extension collisions.
 export const SHORTCUT_KEY = "alt+p";
 
 export const SETTINGS_VERSION = 1;
-export const SENTINEL_OPEN = "<promptsmith-enhanced-prompt>";
-export const SENTINEL_CLOSE = "</promptsmith-enhanced-prompt>";
+export const SENTINEL_OPEN = "<augment-enhanced-prompt>";
+export const SENTINEL_CLOSE = "</augment-enhanced-prompt>";
 
 export const MAX_STATUS_MODEL_ID_LENGTH = 28;
 export const ESTIMATED_FIXED_PROMPT_OVERHEAD_TOKENS = 1_200;
@@ -21,7 +21,7 @@ export const MIN_ENHANCEMENT_TIMEOUT_MS = 5_000;
 export const DEFAULT_ENHANCEMENT_TIMEOUT_MS = 45_000;
 export const MAX_ENHANCEMENT_TIMEOUT_MS = 300_000;
 
-export const DEFAULT_SETTINGS: PromptsmithSettings = {
+export const DEFAULT_SETTINGS: AugmentSettings = {
   version: SETTINGS_VERSION,
   enabled: true,
   shortcutEnabled: true,

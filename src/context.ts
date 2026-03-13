@@ -13,19 +13,19 @@ import type {
   BuildPromptContextOptions,
   ConversationExcerpt,
   ProjectMetadata,
-  PromptsmithContextPayload,
+  AugmentContextPayload,
 } from "./types.js";
 
 export async function buildPromptContext(
   options: BuildPromptContextOptions
-): Promise<PromptsmithContextPayload> {
+): Promise<AugmentContextPayload> {
   const { ctx, draft, settings, activeModel, targetFamily, enhancerModel } = options;
   const safeInputBudget = computeSafeInputBudget(enhancerModel);
   const draftTokens = estimateTextTokens(draft);
 
   if (draftTokens + ESTIMATED_FIXED_PROMPT_OVERHEAD_TOKENS > safeInputBudget) {
     throw new Error(
-      `Promptsmith cannot safely enhance this draft with ${enhancerModel.provider}/${enhancerModel.id} because the editor text is too large.`
+      `Augment cannot safely enhance this draft with ${enhancerModel.provider}/${enhancerModel.id} because the editor text is too large.`
     );
   }
 

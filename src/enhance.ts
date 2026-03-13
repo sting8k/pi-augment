@@ -8,10 +8,10 @@ import { resolveEditorDraft } from "./editor-draft.js";
 import { resolveEnhancerModel } from "./model-selection.js";
 import { resolveTargetFamily } from "./model-routing.js";
 import { buildSentinelReminder, parseEnhancedPrompt } from "./parser.js";
-import type { PromptsmithRuntimeState } from "./state.js";
+import type { AugmentRuntimeState } from "./state.js";
 import { buildClaudeStrategyRequest } from "./strategies/claude.js";
 import { buildGptStrategyRequest } from "./strategies/gpt.js";
-import type { EnhancementPreparation, PromptsmithSettings } from "./types.js";
+import type { EnhancementPreparation, AugmentSettings } from "./types.js";
 import {
   detectRuntimeSupport,
   ensureEnhancementEnabled,
@@ -44,7 +44,7 @@ export interface EnhancementServices {
 
 export async function enhanceEditorDraft(
   ctx: ExtensionContext,
-  runtime: PromptsmithRuntimeState,
+  runtime: AugmentRuntimeState,
   services: EnhancementServices
 ): Promise<void> {
   const support = detectRuntimeSupport(ctx);
@@ -59,7 +59,7 @@ export async function enhanceEditorDraft(
   requireNonEmptyDraft(draft);
 
   if (!runtime.tryStartEnhancement()) {
-    throw new Error("Promptsmith is already enhancing the editor draft.");
+    throw new Error("Augment is already enhancing the editor draft.");
   }
 
   services.refreshStatus(ctx);
@@ -72,7 +72,7 @@ export async function enhanceEditorDraft(
     });
     const outcome = await services.runCancellableTask(
       ctx,
-      `Promptsmith enhancing for ${preparation.resolvedTargetFamily.family} (${preparation.promptContext.effectiveRewriteMode})...`,
+      `Augment enhancing for ${preparation.resolvedTargetFamily.family} (${preparation.promptContext.effectiveRewriteMode})...`,
       (signal) =>
         generateEnhancedPrompt(
           preparation,
@@ -83,7 +83,7 @@ export async function enhanceEditorDraft(
     );
 
     if (outcome === null) {
-      ctx.ui.notify("Promptsmith enhancement cancelled.", "info");
+      ctx.ui.notify("Augment enhancement cancelled.", "info");
       return;
     }
 
@@ -92,13 +92,13 @@ export async function enhanceEditorDraft(
       : outcome;
 
     if (finalText === undefined) {
-      ctx.ui.notify("Promptsmith preview cancelled. Editor left unchanged.", "info");
+      ctx.ui.notify("Augment preview cancelled. Editor left unchanged.", "info");
       return;
     }
 
     runtime.undo.store(draft);
     ctx.ui.setEditorText(finalText);
-    ctx.ui.notify("Promptsmith enhanced the current draft.", "info");
+    ctx.ui.notify("Augment enhanced the current draft.", "info");
   } finally {
     runtime.finishEnhancement();
     services.refreshStatus(ctx);
@@ -107,7 +107,7 @@ export async function enhanceEditorDraft(
 
 async function prepareEnhancement(
   ctx: ExtensionContext,
-  settings: PromptsmithSettings,
+  settings: AugmentSettings,
   draft: string,
   services: Pick<EnhancementServices, "exec">
 ): Promise<EnhancementPreparation> {
@@ -164,7 +164,7 @@ export async function runEnhancementWithLoader(
             return;
           }
 
-          taskError = error instanceof Error ? error : new Error("Promptsmith enhancement failed.");
+          taskError = error instanceof Error ? error : new Error("Augment enhancement failed.");
           done(null);
         });
 
@@ -306,7 +306,7 @@ function buildRetryRequest(request: Context): Context {
 
 function isInvalidModelOutputError(error: unknown): error is Error {
   return (
-    error instanceof Error && error.message.startsWith("Promptsmith received invalid model output:")
+    error instanceof Error && error.message.startsWith("Augment received invalid model output:")
   );
 }
 
@@ -348,12 +348,12 @@ function waitForTimeout(signal: AbortSignal, timeoutMs: number): Promise<never> 
 function createTimeoutError(timeoutMs: number): Error {
   const seconds = Math.floor(timeoutMs / 1_000);
   return new Error(
-    `Promptsmith enhancement timed out after ${seconds} seconds. Try again or choose a faster enhancer model.`
+    `Augment enhancement timed out after ${seconds} seconds. Try again or choose a faster enhancer model.`
   );
 }
 
 export function buildEnhancerModeLabel(
-  settings: PromptsmithSettings,
+  settings: AugmentSettings,
   activeModel: Model<Api> | undefined
 ): string {
   switch (settings.enhancerModelMode) {

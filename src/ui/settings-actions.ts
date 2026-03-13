@@ -17,8 +17,8 @@ import {
   upsertFamilyOverride,
 } from "../overrides.js";
 import { cloneSettings } from "../state.js";
-import type { PromptsmithRuntimeState } from "../state.js";
-import type { ModelRef, PromptsmithFamily, PromptsmithSettings } from "../types.js";
+import type { AugmentRuntimeState } from "../state.js";
+import type { ModelRef, AugmentFamily, AugmentSettings } from "../types.js";
 import { parseEnhancementTimeoutSeconds } from "../validation.js";
 import { openSelectDialog, type SelectDialogItem } from "./select-dialog.js";
 import {
@@ -45,14 +45,14 @@ export interface SettingsUiServices {
 
 interface SettingsActionContext {
   ctx: ExtensionContext;
-  runtime: PromptsmithRuntimeState;
+  runtime: AugmentRuntimeState;
   services: SettingsUiServices;
-  settings: PromptsmithSettings;
+  settings: AugmentSettings;
 }
 
-type SettingsChange = PromptsmithSettings | ((current: PromptsmithSettings) => PromptsmithSettings);
+type SettingsChange = AugmentSettings | ((current: AugmentSettings) => AugmentSettings);
 
-type SettingsMessage = string | ((next: PromptsmithSettings) => string);
+type SettingsMessage = string | ((next: AugmentSettings) => string);
 
 export async function runSettingsAction(
   choice: Exclude<SettingsMenuOptionId, "done">,
@@ -67,7 +67,7 @@ export async function runSettingsAction(
         runtime,
         services,
         (latest) => ({ ...latest, enabled: !latest.enabled }),
-        (next) => `Promptsmith is now ${next.enabled ? "on" : "off"}.`
+        (next) => `Augment is now ${next.enabled ? "on" : "off"}.`
       );
       return;
     case "shortcutEnabled":
@@ -331,7 +331,7 @@ export async function runSettingsAction(
 
 export function resetGlobalSettings(
   ctx: ExtensionContext,
-  runtime: PromptsmithRuntimeState,
+  runtime: AugmentRuntimeState,
   services: SettingsUiServices
 ): void {
   persistSettings(
@@ -339,13 +339,13 @@ export function resetGlobalSettings(
     runtime,
     services,
     cloneSettings(DEFAULT_SETTINGS),
-    "Promptsmith settings reset to defaults."
+    "Augment settings reset to defaults."
   );
 }
 
 function persistSettings(
   ctx: ExtensionContext,
-  runtime: PromptsmithRuntimeState,
+  runtime: AugmentRuntimeState,
   services: SettingsUiServices,
   change: SettingsChange,
   message: SettingsMessage
@@ -360,13 +360,13 @@ function persistSettings(
   } catch (error) {
     services.refreshStatus(ctx);
     const detail = error instanceof Error ? error.message : String(error);
-    ctx.ui.notify(`Failed to save Promptsmith settings. ${detail}`, "error");
+    ctx.ui.notify(`Failed to save Augment settings. ${detail}`, "error");
   }
 }
 
 async function manageExactOverrides(
   ctx: ExtensionContext,
-  runtime: PromptsmithRuntimeState,
+  runtime: AugmentRuntimeState,
   services: SettingsUiServices
 ): Promise<void> {
   let done = false;
@@ -446,7 +446,7 @@ async function manageExactOverrides(
 
 async function managePatternOverrides(
   ctx: ExtensionContext,
-  runtime: PromptsmithRuntimeState,
+  runtime: AugmentRuntimeState,
   services: SettingsUiServices
 ): Promise<void> {
   let done = false;
@@ -570,7 +570,7 @@ async function chooseModelRef(
 async function selectFamily(
   ctx: ExtensionContext,
   title: string
-): Promise<PromptsmithFamily | undefined> {
+): Promise<AugmentFamily | undefined> {
   const selection = await selectOption(ctx, title, FAMILY_OPTIONS);
   if (selection?.startsWith("gpt")) {
     return "gpt";

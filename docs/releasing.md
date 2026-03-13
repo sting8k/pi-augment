@@ -1,4 +1,4 @@
-# Releasing pi-promptsmith
+# Releasing pi-augment
 
 This project uses a manual GitHub Actions workflow plus `release-it` for npm publishing.
 
@@ -6,7 +6,7 @@ This project uses a manual GitHub Actions workflow plus `release-it` for npm pub
 
 The workflow lives at `.github/workflows/release.yml`.
 
-Before using it, add an `NPM_TOKEN` repository secret with publish access to the `pi-promptsmith` package on npm.
+Before using it, add an `NPM_TOKEN` repository secret with publish access to the `pi-augment` package on npm.
 
 Then run the **Release** workflow from GitHub Actions and choose:
 

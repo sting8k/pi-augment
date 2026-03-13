@@ -1,5 +1,5 @@
 import type { ExtensionContext } from "@mariozechner/pi-coding-agent";
-import type { PromptsmithRuntimeState } from "../state.js";
+import type { AugmentRuntimeState } from "../state.js";
 import { detectRuntimeSupport } from "../validation.js";
 import {
   runSettingsAction,
@@ -11,7 +11,7 @@ import { openSelectDialog } from "./select-dialog.js";
 
 export async function openSettingsUi(
   ctx: ExtensionContext,
-  runtime: PromptsmithRuntimeState,
+  runtime: AugmentRuntimeState,
   services: SettingsUiServices
 ): Promise<void> {
   const support = detectRuntimeSupport(ctx);
@@ -23,7 +23,7 @@ export async function openSettingsUi(
     const settings = runtime.getSettings();
     const menuOptions = buildSettingsMenuOptions(settings);
     const choice = (await openSelectDialog(ctx, {
-      title: "Promptsmith settings",
+      title: "Augment settings",
       items: Object.values(menuOptions),
       pageSize: 10,
       searchable: true,

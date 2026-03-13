@@ -106,11 +106,11 @@ async function readClipboardText(exec: ExtensionAPI["exec"]): Promise<string | u
   if (lastErr) {
     if (lastErr instanceof Error) {
       console.error(
-        `Promptsmith failed to read the clipboard with ${lastCommand?.command ?? "an unknown command"}: ${lastErr.stack ?? lastErr.message}`
+        `Augment failed to read the clipboard with ${lastCommand?.command ?? "an unknown command"}: ${lastErr.stack ?? lastErr.message}`
       );
     } else {
       console.error(
-        `Promptsmith failed to read the clipboard with ${lastCommand?.command ?? "an unknown command"}:`,
+        `Augment failed to read the clipboard with ${lastCommand?.command ?? "an unknown command"}:`,
         lastErr
       );
     }
@@ -164,7 +164,7 @@ function isWslEnvironment(): boolean {
 
 function unresolvedPasteMarkerMessage(): string {
   return (
-    "Promptsmith found Pi paste markers in the editor, but Pi's extension API only exposed the collapsed marker text. " +
-    "Copy the original text again and retry so Promptsmith can recover it from the clipboard."
+    "Augment found Pi paste markers in the editor, but Pi's extension API only exposed the collapsed marker text. " +
+    "Copy the original text again and retry so Augment can recover it from the clipboard."
   );
 }

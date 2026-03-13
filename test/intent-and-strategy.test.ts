@@ -10,7 +10,7 @@ import {
 } from "../src/intent.js";
 import { buildStatusLine, buildStatusReport, refreshStatusLine } from "../src/ui/status.js";
 import { createCommandContext, createModel, createRuntimeState } from "./helpers.js";
-import type { PromptsmithContextPayload } from "../src/types.js";
+import type { AugmentContextPayload } from "../src/types.js";
 
 void test("intent classification detects implement-oriented drafts", () => {
   assert.equal(
@@ -20,7 +20,7 @@ void test("intent classification detects implement-oriented drafts", () => {
 });
 
 void test("intent classification detects debug-oriented drafts", () => {
-  assert.equal(detectTaskIntent("Debug why /promptsmith hangs and fix the timeout bug."), "debug");
+  assert.equal(detectTaskIntent("Debug why /augment hangs and fix the timeout bug."), "debug");
 });
 
 void test("intent classification detects refactor-oriented drafts", () => {
@@ -63,7 +63,7 @@ void test("intent classification detects test-fix-oriented drafts", () => {
 });
 
 void test("intent classification detects explain-oriented drafts", () => {
-  assert.equal(detectTaskIntent("Explain how Promptsmith model routing works."), "explain");
+  assert.equal(detectTaskIntent("Explain how Augment model routing works."), "explain");
 });
 
 void test("intent classification keeps explanation-first mixed prompts in explain mode when no action is requested", () => {
@@ -84,13 +84,13 @@ void test("intent classification treats how-to fix prompts as debug work", () =>
 
 void test("intent classification treats how-to implementation prompts as implement work", () => {
   assert.equal(
-    detectTaskIntent("How should I implement rewrite mode support in Promptsmith?"),
+    detectTaskIntent("How should I implement rewrite mode support in Augment?"),
     "implement"
   );
 });
 
 void test("intent classification treats why-is-it-broken prompts with a fix request as debug work", () => {
-  assert.equal(detectTaskIntent("Why is Promptsmith stuck loading and how do we fix it?"), "debug");
+  assert.equal(detectTaskIntent("Why is Augment stuck loading and how do we fix it?"), "debug");
 });
 
 void test("intent classification still prefers execution when the draft asks to explain and fix", () => {
@@ -183,7 +183,7 @@ void test("claude execution-contract strategy allows stronger explicit structure
   const text = extractUserText(request);
   assert.match(text, /XML-like sections/i);
   assert.match(text, /smallest strong contract/i);
-  assert.match(text, /clear feature goal/i);
+  assert.match(text, /framework blocks/i);
 });
 
 void test("extractUserText finds the user message when system messages are prepended", () => {
@@ -241,7 +241,7 @@ void test("status line stays hidden by default", () => {
 
   refreshStatusLine(ctx, runtime);
 
-  assert.equal(ctx.uiState.status.get("promptsmith"), undefined);
+  assert.equal(ctx.uiState.status.get("augment"), undefined);
 });
 
 void test("status line reflects the current draft analysis when enabled", () => {
@@ -254,7 +254,7 @@ void test("status line reflects the current draft analysis when enabled", () => 
 
   refreshStatusLine(ctx, runtime);
 
-  const line = ctx.uiState.status.get("promptsmith");
+  const line = ctx.uiState.status.get("augment");
   assert.ok(line);
   assert.match(line, /mode: auto → execution-contract\/review/);
 });
@@ -268,11 +268,11 @@ void test("status line clears when the footer status setting is turned off", () 
   });
 
   refreshStatusLine(ctx, runtime);
-  assert.ok(ctx.uiState.status.get("promptsmith"));
+  assert.ok(ctx.uiState.status.get("augment"));
 
   runtime.replaceSettings({ ...runtime.getSettings(), statusBarEnabled: false });
   refreshStatusLine(ctx, runtime);
-  assert.equal(ctx.uiState.status.get("promptsmith"), undefined);
+  assert.equal(ctx.uiState.status.get("augment"), undefined);
 });
 
 void test("status line falls back to configured rewrite mode when the editor is empty", () => {
@@ -313,8 +313,8 @@ void test("status report reuses the last analyzed draft resolution outside inter
 });
 
 function createPromptContext(
-  overrides: Partial<PromptsmithContextPayload>
-): PromptsmithContextPayload {
+  overrides: Partial<AugmentContextPayload>
+): AugmentContextPayload {
   return {
     draft: "draft",
     activeModel: { provider: "openai", id: "gpt-5" },

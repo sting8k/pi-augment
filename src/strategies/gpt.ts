@@ -1,9 +1,9 @@
 import type { Context, Message } from "@mariozechner/pi-ai";
 import { buildStrategyInstructions } from "../contracts.js";
 import { buildSharedContextSections, buildSharedSystemPrompt } from "./shared.js";
-import type { PromptsmithContextPayload } from "../types.js";
+import type { AugmentContextPayload } from "../types.js";
 
-export function buildGptStrategyRequest(context: PromptsmithContextPayload): Context {
+export function buildGptStrategyRequest(context: AugmentContextPayload): Context {
   const userMessage: Message = {
     role: "user",
     timestamp: Date.now(),
