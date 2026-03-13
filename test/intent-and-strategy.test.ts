@@ -1,16 +1,16 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { buildClaudeStrategyRequest } from "../src/strategies/claude.js";
-import { buildGptStrategyRequest } from "../src/strategies/gpt.js";
-import { buildPromptContext } from "../src/context.js";
+import { buildStrategyRequest } from "../src/strategies/strategy.js";
 import {
   analyzeDraftIntent,
   detectTaskIntent,
   resolveEffectiveRewriteMode,
 } from "../src/intent.js";
-import { buildStatusLine, buildStatusReport, refreshStatusLine } from "../src/ui/status.js";
-import { createCommandContext, createModel, createRuntimeState } from "./helpers.js";
 import type { AugmentContextPayload } from "../src/types.js";
+
+// ---------------------------------------------------------------------------
+// Intent detection
+// ---------------------------------------------------------------------------
 
 void test("intent classification detects implement-oriented drafts", () => {
   assert.equal(
@@ -119,50 +119,16 @@ void test("draft analysis resolves intent and effective rewrite mode together", 
   });
 });
 
-void test("buildPromptContext does not claim missing conversation was dropped", async () => {
-  const model = createModel();
-  const runtime = createRuntimeState();
-  const ctx = createCommandContext({ model, entries: [] });
+// ---------------------------------------------------------------------------
+// Strategy request building
+// ---------------------------------------------------------------------------
 
-  const promptContext = await buildPromptContext({
-    ctx,
-    draft: "Explain how rewrite mode works.",
-    settings: { ...runtime.getSettings(), includeRecentConversation: true },
-    activeModel: model,
-    targetFamily: "gpt",
-    enhancerModel: model,
-    exec: () => Promise.resolve({ stdout: "", stderr: "", code: 0 }),
-  });
-
-  assert.equal(promptContext.recentConversation.length, 0);
-  assert.equal(promptContext.droppedContext.includes("recent conversation"), false);
-});
-
-void test("buildPromptContext caps the safe input budget to the enhancer model usable room", async () => {
-  const model = createModel({ contextWindow: 1_500, maxTokens: 1_000 });
-  const runtime = createRuntimeState();
-  const ctx = createCommandContext({ model, entries: [] });
-
-  await assert.rejects(
-    buildPromptContext({
-      ctx,
-      draft: "x".repeat(20_000),
-      settings: runtime.getSettings(),
-      activeModel: model,
-      targetFamily: "gpt",
-      enhancerModel: model,
-      exec: () => Promise.resolve({ stdout: "", stderr: "", code: 0 }),
-    }),
-    /too large/i
+void test("strategy request changes instructions between plain and execution-contract modes", () => {
+  const plainRequest = buildStrategyRequest(
+    createPromptContext({ effectiveRewriteMode: "plain", intent: "explain", targetFamily: "gpt" })
   );
-});
-
-void test("gpt strategy request changes instructions between plain and execution-contract modes", () => {
-  const plainRequest = buildGptStrategyRequest(
-    createPromptContext({ effectiveRewriteMode: "plain", intent: "explain" })
-  );
-  const contractRequest = buildGptStrategyRequest(
-    createPromptContext({ effectiveRewriteMode: "execution-contract", intent: "debug" })
+  const contractRequest = buildStrategyRequest(
+    createPromptContext({ effectiveRewriteMode: "execution-contract", intent: "debug", targetFamily: "gpt" })
   );
 
   const plainText = extractUserText(plainRequest);
@@ -175,15 +141,36 @@ void test("gpt strategy request changes instructions between plain and execution
   assert.match(contractText, /<effective_rewrite_mode>\s*execution-contract/i);
 });
 
-void test("claude execution-contract strategy allows stronger explicit structure without bloating", () => {
-  const request = buildClaudeStrategyRequest(
-    createPromptContext({ effectiveRewriteMode: "execution-contract", intent: "implement" })
+void test("claude execution-contract strategy allows stronger explicit structure", () => {
+  const request = buildStrategyRequest(
+    createPromptContext({ effectiveRewriteMode: "execution-contract", intent: "implement", targetFamily: "claude" })
   );
 
   const text = extractUserText(request);
   assert.match(text, /XML-like sections/i);
   assert.match(text, /smallest strong contract/i);
   assert.match(text, /framework blocks/i);
+});
+
+void test("system prompt includes Prompt Leverage framework reference", () => {
+  const request = buildStrategyRequest(
+    createPromptContext({ targetFamily: "claude" })
+  );
+
+  assert.ok(request.systemPrompt);
+  assert.match(request.systemPrompt, /Prompt Leverage framework/);
+  assert.match(request.systemPrompt, /Transformation Rules/);
+  assert.match(request.systemPrompt, /Quality Bar/);
+  assert.match(request.systemPrompt, /Framework Blocks/);
+});
+
+void test("context sections include effort level", () => {
+  const request = buildStrategyRequest(
+    createPromptContext({ draft: "Implement a new feature", intent: "implement" })
+  );
+
+  const text = extractUserText(request);
+  assert.match(text, /<effort_level>/);
 });
 
 void test("extractUserText finds the user message when system messages are prepended", () => {
@@ -199,118 +186,9 @@ void test("extractUserText finds the user message when system messages are prepe
   );
 });
 
-void test("status report includes rewrite mode, timeout, and draft intent when interactive", () => {
-  const runtime = createRuntimeState();
-  runtime.replaceSettings({
-    ...runtime.getSettings(),
-    rewriteMode: "auto",
-    statusBarEnabled: true,
-    enhancementTimeoutMs: 12_000,
-  });
-  const ctx = createCommandContext({
-    model: createModel(),
-    editorText: "Implement rewriteMode support in src/state.ts and run tests.",
-  });
-
-  const report = buildStatusReport(ctx, runtime);
-
-  assert.match(report, /configured rewrite mode: auto/);
-  assert.match(report, /effective rewrite mode: execution-contract/);
-  assert.match(report, /task intent: implement/);
-  assert.match(report, /status bar enabled: true/);
-  assert.match(report, /enhancement timeout: 12s/);
-});
-
-void test("status resolves the fallback family even when no active model is selected", () => {
-  const runtime = createRuntimeState();
-  runtime.replaceSettings({ ...runtime.getSettings(), fallbackFamily: "claude" });
-  const ctx = createCommandContext({ editorText: "" });
-
-  const report = buildStatusReport(ctx, runtime);
-
-  assert.match(report, /active model: none/);
-  assert.match(report, /resolved target family: claude via fallback/);
-});
-
-void test("status line stays hidden by default", () => {
-  const runtime = createRuntimeState();
-  const ctx = createCommandContext({
-    model: createModel(),
-    editorText: "Review this implementation and report findings.",
-  });
-
-  refreshStatusLine(ctx, runtime);
-
-  assert.equal(ctx.uiState.status.get("augment"), undefined);
-});
-
-void test("status line reflects the current draft analysis when enabled", () => {
-  const runtime = createRuntimeState();
-  runtime.replaceSettings({ ...runtime.getSettings(), statusBarEnabled: true });
-  const ctx = createCommandContext({
-    model: createModel(),
-    editorText: "Review this implementation and report findings.",
-  });
-
-  refreshStatusLine(ctx, runtime);
-
-  const line = ctx.uiState.status.get("augment");
-  assert.ok(line);
-  assert.match(line, /mode: auto → execution-contract\/review/);
-});
-
-void test("status line clears when the footer status setting is turned off", () => {
-  const runtime = createRuntimeState();
-  runtime.replaceSettings({ ...runtime.getSettings(), statusBarEnabled: true });
-  const ctx = createCommandContext({
-    model: createModel(),
-    editorText: "Review this implementation and report findings.",
-  });
-
-  refreshStatusLine(ctx, runtime);
-  assert.ok(ctx.uiState.status.get("augment"));
-
-  runtime.replaceSettings({ ...runtime.getSettings(), statusBarEnabled: false });
-  refreshStatusLine(ctx, runtime);
-  assert.equal(ctx.uiState.status.get("augment"), undefined);
-});
-
-void test("status line falls back to configured rewrite mode when the editor is empty", () => {
-  const runtime = createRuntimeState();
-  const snapshotLine = buildStatusLine({
-    settings: runtime.getSettings(),
-    enhancerModeLabel: "active (openai/gpt-5)",
-    busy: false,
-    undoAvailable: false,
-    lastDraftResolution: { intent: "implement", effectiveRewriteMode: "execution-contract" },
-  });
-
-  assert.match(snapshotLine, /mode: auto/);
-  assert.doesNotMatch(snapshotLine, /execution-contract\/implement/);
-});
-
-void test("status report reuses the last analyzed draft resolution outside interactive editor mode", () => {
-  const runtime = createRuntimeState();
-
-  const interactiveCtx = createCommandContext({
-    model: createModel(),
-    editorText: "Implement rewriteMode support in src/state.ts and run tests.",
-  });
-  buildStatusReport(interactiveCtx, runtime);
-
-  const headlessCtx = createCommandContext({
-    hasUI: false,
-    model: createModel(),
-    editorText: "Explain this",
-  });
-  const report = buildStatusReport(headlessCtx, runtime);
-
-  assert.match(report, /configured rewrite mode: auto/);
-  assert.match(report, /effective rewrite mode: unavailable outside interactive editor mode/);
-  assert.match(report, /task intent: unavailable outside interactive editor mode/);
-  assert.match(report, /last analyzed effective rewrite mode: execution-contract/);
-  assert.match(report, /last analyzed task intent: implement/);
-});
+// ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
 
 function createPromptContext(
   overrides: Partial<AugmentContextPayload>
@@ -319,13 +197,9 @@ function createPromptContext(
     draft: "draft",
     activeModel: { provider: "openai", id: "gpt-5" },
     targetFamily: "gpt",
-    rewriteStrength: "balanced",
-    configuredRewriteMode: "auto",
     effectiveRewriteMode: "plain",
     intent: "general",
-    preserveCodeBlocks: true,
     recentConversation: [],
-    droppedContext: [],
     ...overrides,
   };
 }
@@ -339,10 +213,7 @@ function extractUserText(request: {
     return userMessage.content;
   }
   const textPart = userMessage.content.find((part): part is { type: "text"; text: string } => {
-    if (!part || typeof part !== "object") {
-      return false;
-    }
-
+    if (!part || typeof part !== "object") return false;
     const candidate = part as { type?: unknown; text?: unknown };
     return candidate.type === "text" && typeof candidate.text === "string";
   });

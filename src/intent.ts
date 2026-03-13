@@ -1,5 +1,4 @@
 import type {
-  AugmentEffectiveRewriteMode,
   AugmentRewriteMode,
   AugmentTaskIntent,
 } from "./types.js";
@@ -11,7 +10,7 @@ export interface IntentMatchRule {
 
 export interface DraftIntentAnalysis {
   intent: AugmentTaskIntent;
-  effectiveRewriteMode: AugmentEffectiveRewriteMode;
+  effectiveRewriteMode: AugmentRewriteMode;
 }
 
 const REVIEW_RULE: IntentMatchRule = {
@@ -245,9 +244,9 @@ export function detectTaskIntent(draft: string): AugmentTaskIntent {
 }
 
 export function resolveEffectiveRewriteMode(
-  configuredMode: AugmentRewriteMode,
+  configuredMode: AugmentRewriteMode | "auto",
   intent: AugmentTaskIntent
-): AugmentEffectiveRewriteMode {
+): AugmentRewriteMode {
   if (configuredMode === "plain") {
     return "plain";
   }
@@ -261,7 +260,7 @@ export function resolveEffectiveRewriteMode(
 
 export function analyzeDraftIntent(
   draft: string,
-  configuredMode: AugmentRewriteMode
+  configuredMode: AugmentRewriteMode | "auto"
 ): DraftIntentAnalysis {
   const intent = detectTaskIntent(draft);
   return {

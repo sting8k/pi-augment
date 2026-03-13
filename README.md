@@ -19,29 +19,33 @@ Or try without installing:
 pi -e https://github.com/sting8k/pi-augment
 ```
 
+## Usage
+
+```
+/aug <your prompt here>
+```
+
+Type your prompt after `/aug`, the extension will:
+
+1. Detect intent (implement, debug, refactor, review, research, docs, test-fix, explain)
+2. Auto-select rewrite mode (plain or execution-contract) based on intent
+3. Enhance the prompt with Prompt Leverage framework blocks
+4. Place the enhanced prompt in the editor for you to review and send
+
+## Examples
+
+```
+/aug fix the login bug where users get redirected to 404
+/aug refactor the strategy builder to reduce branching
+/aug review this PR for security issues
+/aug explain how the model routing works
+```
+
 ## Features
 
-- **Intent detection** — auto-classifies your prompt (implement, debug, refactor, review, research, docs, test-fix, explain) and tailors the rewrite accordingly
-- **Two rewrite modes** — `plain` (stronger prompt) or `execution-contract` (structured task contract for coding agents), auto-selected based on intent
-- **Prompt Leverage framework** — deterministic first-pass adds framework blocks (work style, tool rules, verification, done criteria) before LLM refinement
+- **Intent detection** — auto-classifies prompt type and tailors the rewrite
+- **Two rewrite modes** — `plain` (stronger prompt) or `execution-contract` (structured task contract), auto-selected
+- **Prompt Leverage framework** — adds framework blocks (work style, tool rules, verification, done criteria) as needed
 - **Intensity levels** — Light / Standard / Deep, inferred from task complexity
-- **Model-family aware** — generates GPT-style or Claude-style prompts based on target model
-- **Context injection** — includes recent conversation, project metadata, and active model info
-- **Undo** — revert the last enhancement
-- **Shortcut** — `Alt+P` to enhance the current prompt
-
-## Commands
-
-| Command | Description |
-|---------|-------------|
-| `/augment` | Enhance the current prompt |
-| `/augment undo` | Revert last enhancement |
-| `/augment status` | Show current settings and state |
-| `/augment settings` | Open settings menu |
-| `/augment enable\|disable` | Toggle on/off |
-| `/augment mode auto\|plain\|execution-contract` | Set rewrite mode |
-| `/augment strength light\|balanced\|strong` | Set rewrite strength |
-| `/augment family auto\|gpt\|claude` | Set target model family |
-| `/augment preview on\|off` | Preview before replacing |
-
-Run `/augment` with no args to see all available subcommands.
+- **Model-family aware** — generates GPT-style or Claude-style prompts based on active model
+- **Context injection** — includes recent conversation and project metadata

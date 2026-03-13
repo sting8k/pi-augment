@@ -49,12 +49,9 @@ export function buildSharedSystemPrompt(targetStyle: "GPT-style" | "Claude-style
 export function buildSharedContextSections(context: AugmentContextPayload): string {
   const sections = [
     section("resolved_target_family", context.targetFamily),
-    section("rewrite_strength", context.rewriteStrength),
-    section("configured_rewrite_mode", context.configuredRewriteMode),
     section("effective_rewrite_mode", context.effectiveRewriteMode),
     section("resolved_intent", context.intent),
     section("effort_level", inferIntensity(context.draft, context.intent)),
-    section("preserve_code_blocks", context.preserveCodeBlocks ? "true" : "false"),
   ];
 
   if (context.activeModel) {
@@ -84,10 +81,6 @@ export function buildSharedContextSections(context: AugmentContextPayload): stri
         ].join("\n")
       )
     );
-  }
-
-  if (context.droppedContext.length > 0) {
-    sections.push(section("dropped_optional_context", context.droppedContext.join(", ")));
   }
 
   sections.push(section("editor_draft", context.draft));

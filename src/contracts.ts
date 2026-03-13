@@ -1,12 +1,3 @@
-/**
- * Strategy instructions powered by the Prompt Leverage framework.
- *
- * Replaces the old plain/execution-contract split with structured framework
- * blocks (Objective → Context → Work Style → Tool Rules → Output Contract →
- * Verification → Done Criteria) that are selected based on the resolved
- * rewrite mode and task intent.
- */
-
 import {
   buildDoneCriteria,
   buildOutputContract,
@@ -15,10 +6,7 @@ import {
   buildWorkStyle,
   inferIntensity,
 } from "./prompt-leverage.js";
-import type {
-  AugmentContextPayload,
-  AugmentFamily,
-} from "./types.js";
+import type { AugmentContextPayload, AugmentFamily } from "./types.js";
 
 export function buildStrategyInstructions(
   family: AugmentFamily,

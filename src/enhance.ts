@@ -1,237 +1,84 @@
 import { clearTimeout, setTimeout } from "node:timers";
 import type { Api, AssistantMessage, Context, Model } from "@mariozechner/pi-ai";
-import { ENHANCER_MAX_OUTPUT_TOKENS } from "./constants.js";
-import type { ExtensionAPI, ExtensionContext } from "@mariozechner/pi-coding-agent";
+import { complete } from "@mariozechner/pi-ai";
+import type { ExtensionAPI, ExtensionCommandContext } from "@mariozechner/pi-coding-agent";
 import { BorderedLoader } from "@mariozechner/pi-coding-agent";
+import { ENHANCER_MAX_OUTPUT_TOKENS, DEFAULT_ENHANCEMENT_TIMEOUT_MS } from "./constants.js";
 import { buildPromptContext } from "./context.js";
-import { resolveEditorDraft } from "./editor-draft.js";
-import { resolveEnhancerModel } from "./model-selection.js";
-import { resolveTargetFamily } from "./model-routing.js";
 import { buildSentinelReminder, parseEnhancedPrompt } from "./parser.js";
-import type { AugmentRuntimeState } from "./state.js";
-import { buildClaudeStrategyRequest } from "./strategies/claude.js";
-import { buildGptStrategyRequest } from "./strategies/gpt.js";
-import type { EnhancementPreparation, AugmentSettings } from "./types.js";
-import {
-  detectRuntimeSupport,
-  ensureEnhancementEnabled,
-  requireNonEmptyDraft,
-} from "./validation.js";
+import { buildStrategyRequest } from "./strategies/strategy.js";
+import type { EnhancementResult } from "./types.js";
 
-export type CompleteOptions = Record<string, unknown> & {
-  apiKey?: string;
-  signal?: AbortSignal;
-  maxTokens?: number;
-};
-
-export type CompleteFn = (
-  model: Model<Api>,
-  context: Context,
-  options?: CompleteOptions
-) => Promise<AssistantMessage>;
-
-export interface EnhancementServices {
-  completeFn: CompleteFn;
-  exec: ExtensionAPI["exec"];
-  refreshStatus: (ctx: ExtensionContext) => void;
-  enhancementTimeoutMs?: number;
-  runCancellableTask: (
-    ctx: ExtensionContext,
-    message: string,
-    task: (signal: AbortSignal) => Promise<string | null>
-  ) => Promise<string | null>;
-}
-
-export async function enhanceEditorDraft(
-  ctx: ExtensionContext,
-  runtime: AugmentRuntimeState,
-  services: EnhancementServices
-): Promise<void> {
-  const support = detectRuntimeSupport(ctx);
-  if (!support.interactiveTui) {
-    throw new Error(support.reason);
+export async function enhance(
+  ctx: ExtensionCommandContext,
+  exec: ExtensionAPI["exec"],
+  draft: string
+): Promise<EnhancementResult | null> {
+  const model = ctx.model as Model<Api> | undefined;
+  if (!model) {
+    throw new Error("No active model. Select a model first.");
   }
 
-  const settings = runtime.getSettings();
-  ensureEnhancementEnabled(settings);
-
-  const draft = await resolveEditorDraft(ctx, services.exec);
-  requireNonEmptyDraft(draft);
-
-  if (!runtime.tryStartEnhancement()) {
-    throw new Error("Augment is already enhancing the editor draft.");
+  const apiKey = await ctx.modelRegistry.getApiKey(model);
+  if (!apiKey) {
+    throw new Error(`No API key for ${model.provider}/${model.id}.`);
   }
 
-  services.refreshStatus(ctx);
+  const promptContext = await buildPromptContext(ctx, exec, draft);
+  const request = buildStrategyRequest(promptContext);
 
-  try {
-    const preparation = await prepareEnhancement(ctx, settings, draft, services);
-    runtime.rememberDraftResolution({
-      intent: preparation.promptContext.intent,
-      effectiveRewriteMode: preparation.promptContext.effectiveRewriteMode,
-    });
-    const outcome = await services.runCancellableTask(
-      ctx,
-      `Augment enhancing for ${preparation.resolvedTargetFamily.family} (${preparation.promptContext.effectiveRewriteMode})...`,
-      (signal) =>
-        generateEnhancedPrompt(
-          preparation,
-          services.completeFn,
-          signal,
-          services.enhancementTimeoutMs ?? settings.enhancementTimeoutMs
-        )
-    );
-
-    if (outcome === null) {
-      ctx.ui.notify("Augment enhancement cancelled.", "info");
-      return;
-    }
-
-    const finalText = settings.previewBeforeReplace
-      ? await previewEnhancedPrompt(ctx, outcome)
-      : outcome;
-
-    if (finalText === undefined) {
-      ctx.ui.notify("Augment preview cancelled. Editor left unchanged.", "info");
-      return;
-    }
-
-    runtime.undo.store(draft);
-    ctx.ui.setEditorText(finalText);
-    ctx.ui.notify("Augment enhanced the current draft.", "info");
-  } finally {
-    runtime.finishEnhancement();
-    services.refreshStatus(ctx);
-  }
-}
-
-async function prepareEnhancement(
-  ctx: ExtensionContext,
-  settings: AugmentSettings,
-  draft: string,
-  services: Pick<EnhancementServices, "exec">
-): Promise<EnhancementPreparation> {
-  const resolvedTargetFamily = resolveTargetFamily(settings, ctx.model);
-  const enhancerModel = await resolveEnhancerModel(
-    settings,
-    resolvedTargetFamily.family,
-    ctx.model,
-    ctx.modelRegistry
-  );
-  const promptContext = await buildPromptContext({
+  const enhanced = await runWithLoader(
     ctx,
-    draft,
-    settings,
-    activeModel: ctx.model,
-    targetFamily: resolvedTargetFamily.family,
-    enhancerModel: enhancerModel.model,
-    exec: (command, args) => services.exec(command, args, { cwd: ctx.cwd }),
-  });
-  const request =
-    resolvedTargetFamily.family === "claude"
-      ? buildClaudeStrategyRequest(promptContext)
-      : buildGptStrategyRequest(promptContext);
+    `Augmenting (${promptContext.intent}, ${promptContext.targetFamily})...`,
+    async (signal) => {
+      const response = await callLLM(model, apiKey, request, signal);
+      if (!response) return null;
+
+      const text = extractText(response);
+      try {
+        return parseEnhancedPrompt(text);
+      } catch {
+        // Retry once with stronger sentinel reminder
+        const retryRequest = addSentinelReminder(request);
+        const retryResponse = await callLLM(model, apiKey, retryRequest, signal);
+        if (!retryResponse) return null;
+        return parseEnhancedPrompt(extractText(retryResponse));
+      }
+    }
+  );
+
+  if (!enhanced) return null;
 
   return {
-    resolvedTargetFamily,
-    enhancerModel,
-    promptContext,
-    request,
+    enhanced,
+    intent: promptContext.intent,
+    mode: promptContext.effectiveRewriteMode,
+    family: promptContext.targetFamily,
   };
 }
 
-export async function runEnhancementWithLoader(
-  ctx: ExtensionContext,
-  message: string,
-  task: (signal: AbortSignal) => Promise<string | null>
-): Promise<string | null> {
-  let taskError: Error | undefined;
-
-  return ctx.ui
-    .custom<string | null>((tui, theme, _keybindings, done) => {
-      const loader = new BorderedLoader(tui, theme, message, { cancellable: true });
-      loader.onAbort = () => done(null);
-
-      void task(loader.signal)
-        .then((result) => {
-          if (!loader.signal.aborted) {
-            done(result);
-          }
-        })
-        .catch((error: unknown) => {
-          if (loader.signal.aborted) {
-            done(null);
-            return;
-          }
-
-          taskError = error instanceof Error ? error : new Error("Augment enhancement failed.");
-          done(null);
-        });
-
-      return loader;
-    })
-    .then((result) => {
-      if (taskError !== undefined) {
-        throw taskError;
-      }
-      return result;
-    });
-}
-
-async function generateEnhancedPrompt(
-  preparation: EnhancementPreparation,
-  completeFn: CompleteFn,
-  signal: AbortSignal,
-  timeoutMs: number
-): Promise<string | null> {
+async function callLLM(
+  model: Model<Api>,
+  apiKey: string,
+  request: Context,
+  signal: AbortSignal
+): Promise<AssistantMessage | null> {
   const timeoutController = new AbortController();
-  const timeoutId = setTimeout(() => timeoutController.abort(), timeoutMs);
-  const requestSignal = AbortSignal.any([signal, timeoutController.signal]);
+  const timeoutId = setTimeout(() => timeoutController.abort(), DEFAULT_ENHANCEMENT_TIMEOUT_MS);
+  const combined = AbortSignal.any([signal, timeoutController.signal]);
 
   try {
-    const primaryResponse = await runCompletion(
-      completeFn,
-      preparation,
-      preparation.request,
-      requestSignal,
-      signal,
-      timeoutController.signal,
-      timeoutMs
-    );
-    if (primaryResponse === null) {
-      return null;
-    }
-
-    const primaryText = extractTextResponse(primaryResponse);
-
-    try {
-      return parseEnhancedPrompt(primaryText);
-    } catch (error) {
-      if (!isInvalidModelOutputError(error)) {
-        throw error;
-      }
-
-      const retryResponse = await runCompletion(
-        completeFn,
-        preparation,
-        buildRetryRequest(preparation.request),
-        requestSignal,
-        signal,
-        timeoutController.signal,
-        timeoutMs
-      );
-      if (retryResponse === null) {
-        return null;
-      }
-
-      return parseEnhancedPrompt(extractTextResponse(retryResponse));
-    }
+    const response = await complete(model, request, {
+      apiKey,
+      signal: combined,
+      maxTokens: Math.min(model.maxTokens, ENHANCER_MAX_OUTPUT_TOKENS),
+    });
+    if (signal.aborted || response.stopReason === "aborted") return null;
+    return response;
   } catch (error) {
-    if (signal.aborted) {
-      return null;
-    }
+    if (signal.aborted) return null;
     if (timeoutController.signal.aborted) {
-      throw createTimeoutError(timeoutMs);
+      throw new Error("Augment timed out. Try again or use a faster model.");
     }
     throw error;
   } finally {
@@ -239,136 +86,54 @@ async function generateEnhancedPrompt(
   }
 }
 
-async function runCompletion(
-  completeFn: CompleteFn,
-  preparation: EnhancementPreparation,
-  request: Context,
-  requestSignal: AbortSignal,
-  signal: AbortSignal,
-  timeoutSignal: AbortSignal,
-  timeoutMs: number
-): Promise<AssistantMessage | null> {
-  const response = await Promise.race<AssistantMessage | null>([
-    completeFn(preparation.enhancerModel.model, request, {
-      apiKey: preparation.enhancerModel.apiKey,
-      signal: requestSignal,
-      maxTokens: Math.min(preparation.enhancerModel.model.maxTokens, ENHANCER_MAX_OUTPUT_TOKENS),
-    }),
-    waitForAbort(signal, null),
-    waitForTimeout(timeoutSignal, timeoutMs),
-  ]);
-
-  if (response === null) {
-    return null;
+async function runWithLoader<T>(
+  ctx: ExtensionCommandContext,
+  message: string,
+  task: (signal: AbortSignal) => Promise<T | null>
+): Promise<T | null> {
+  if (!ctx.hasUI) {
+    // No UI — just run the task directly
+    const controller = new AbortController();
+    return task(controller.signal);
   }
 
-  if (response.stopReason === "aborted") {
-    if (signal.aborted) {
-      return null;
-    }
-    if (timeoutSignal.aborted) {
-      throw createTimeoutError(timeoutMs);
-    }
-    return null;
-  }
+  let taskError: Error | undefined;
 
-  return response;
+  const result = await ctx.ui.custom<T | null>((tui, theme, _keybindings, done) => {
+    const loader = new BorderedLoader(tui, theme, message, { cancellable: true });
+    loader.onAbort = () => done(null);
+
+    void task(loader.signal)
+      .then((r) => {
+        if (!loader.signal.aborted) done(r);
+      })
+      .catch((err: unknown) => {
+        if (loader.signal.aborted) {
+          done(null);
+          return;
+        }
+        taskError = err instanceof Error ? err : new Error("Enhancement failed.");
+        done(null);
+      });
+
+    return loader;
+  });
+
+  if (taskError) throw taskError;
+  return result;
 }
 
-function buildRetryRequest(request: Context): Context {
-  const messages = request.messages.slice();
-  const lastMessage = messages.at(-1);
-
-  if (lastMessage) {
-    const nextContent = Array.isArray(lastMessage.content)
-      ? lastMessage.content.map((part) =>
-          part.type === "text"
-            ? {
-                ...part,
-                text: `${part.text}\n\nIMPORTANT: Reply with exactly one sentinel block and no surrounding commentary.`,
-              }
-            : part
-        )
-      : lastMessage.content;
-
-    messages[messages.length - 1] = {
-      ...lastMessage,
-      content: nextContent,
-    } as (typeof messages)[number];
-  }
-
+function addSentinelReminder(request: Context): Context {
   return {
     ...request,
     systemPrompt: `${request.systemPrompt}\n${buildSentinelReminder()} Do not add markdown fences, explanations, or any text before or after the sentinel block.`,
-    messages,
   };
 }
 
-function isInvalidModelOutputError(error: unknown): error is Error {
-  return (
-    error instanceof Error && error.message.startsWith("Augment received invalid model output:")
-  );
-}
-
-async function previewEnhancedPrompt(
-  ctx: ExtensionContext,
-  enhancedPrompt: string
-): Promise<string | undefined> {
-  return ctx.ui.editor("Review enhanced prompt", enhancedPrompt);
-}
-
-function extractTextResponse(response: AssistantMessage): string {
+function extractText(response: AssistantMessage): string {
   return response.content
-    .filter((part): part is { type: "text"; text: string } => part.type === "text")
-    .map((part) => part.text)
+    .filter((p): p is { type: "text"; text: string } => p.type === "text")
+    .map((p) => p.text)
     .join("\n")
     .trim();
-}
-
-function waitForAbort<T>(signal: AbortSignal, value: T): Promise<T> {
-  if (signal.aborted) {
-    return Promise.resolve(value);
-  }
-
-  return new Promise<T>((resolve) => {
-    signal.addEventListener("abort", () => resolve(value), { once: true });
-  });
-}
-
-function waitForTimeout(signal: AbortSignal, timeoutMs: number): Promise<never> {
-  if (signal.aborted) {
-    return Promise.reject(createTimeoutError(timeoutMs));
-  }
-
-  return new Promise<never>((_resolve, reject) => {
-    signal.addEventListener("abort", () => reject(createTimeoutError(timeoutMs)), { once: true });
-  });
-}
-
-function createTimeoutError(timeoutMs: number): Error {
-  const seconds = Math.floor(timeoutMs / 1_000);
-  return new Error(
-    `Augment enhancement timed out after ${seconds} seconds. Try again or choose a faster enhancer model.`
-  );
-}
-
-export function buildEnhancerModeLabel(
-  settings: AugmentSettings,
-  activeModel: Model<Api> | undefined
-): string {
-  switch (settings.enhancerModelMode) {
-    case "active":
-      return activeModel
-        ? `active (${activeModel.provider}/${activeModel.id})`
-        : "active (no model)";
-    case "fixed":
-      return settings.fixedEnhancerModel
-        ? `${settings.fixedEnhancerModel.provider}/${settings.fixedEnhancerModel.id}`
-        : "fixed (unconfigured)";
-    case "family-linked": {
-      const gpt = settings.familyEnhancerModels?.gpt;
-      const claude = settings.familyEnhancerModels?.claude;
-      return `family-linked (${gpt ? `${gpt.provider}/${gpt.id}` : "gpt:unset"}; ${claude ? `${claude.provider}/${claude.id}` : "claude:unset"})`;
-    }
-  }
 }
