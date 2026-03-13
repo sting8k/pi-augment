@@ -2,7 +2,7 @@
 
 Pi extension that rewrites your prompts into stronger, more structured versions before sending them to the LLM — Augment-style, one command. Uses intent detection and the [Prompt Leverage](https://github.com/hoangnb24/skills/tree/main/skills/prompt-leverage) framework to add just enough scaffolding without over-specifying simple tasks.
 
-Inspired by [pi-promptsmith](https://github.com/ayagmar/pi-promptsmith).
+Inspired by [pi-promptsmith](https://github.com/ayagmar/pi-promptsmith) and [prompt-leverage](https://github.com/hoangnb24/skills/tree/main/skills/prompt-leverage).
 
 ## Install
 
