@@ -24,7 +24,7 @@ pi -e https://github.com/sting8k/pi-augment
 
 The extension will:
 
-1. Detect intent (implement, debug, refactor, review, research, docs, test-fix, explain)
+1. Detect intent (implement, debug, refactor, review, research, docs, test-fix, explain, general)
 2. Auto-select rewrite mode — `plain` for simple tasks, `execution-contract` for complex ones
 3. Enhance using Prompt Leverage framework blocks (objective, context, work style, tool rules, verification, done criteria)
 4. Place the result in the editor for you to review and send
