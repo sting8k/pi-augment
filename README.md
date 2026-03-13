@@ -1,11 +1,8 @@
 # pi-augment
 
-Pi extension that rewrites your prompts into stronger, more structured versions before sending them to the LLM. Uses intent detection and the Prompt Leverage framework to add just enough scaffolding — objective, context, work style, tool rules, verification, and done criteria — without over-specifying simple tasks.
+Pi extension that rewrites your prompts into stronger, more structured versions before sending them to the LLM. Uses intent detection and the [Prompt Leverage](https://github.com/hoangnb24/skills/tree/main/skills/prompt-leverage) framework to add just enough scaffolding without over-specifying simple tasks.
 
-## Inspired by
-
-- [pi-promptsmith](https://github.com/ayagmar/pi-promptsmith) — the original prompt rewriter extension for Pi
-- [prompt-leverage](https://github.com/hoangnb24/skills/tree/main/skills/prompt-leverage) — the framework powering the rewrite logic (Objective → Context → Work Style → Tool Rules → Output Contract → Verification → Done Criteria)
+Inspired by [pi-promptsmith](https://github.com/ayagmar/pi-promptsmith).
 
 ## Install
 
@@ -25,12 +22,12 @@ pi -e https://github.com/sting8k/pi-augment
 /augment <your prompt here>
 ```
 
-Type your prompt after `/aug`, the extension will:
+The extension will:
 
 1. Detect intent (implement, debug, refactor, review, research, docs, test-fix, explain)
-2. Auto-select rewrite mode (plain or execution-contract) based on intent
-3. Enhance the prompt with Prompt Leverage framework blocks
-4. Place the enhanced prompt in the editor for you to review and send
+2. Auto-select rewrite mode — `plain` for simple tasks, `execution-contract` for complex ones
+3. Enhance using Prompt Leverage framework blocks (objective, context, work style, tool rules, verification, done criteria)
+4. Place the result in the editor for you to review and send
 
 ## Examples
 
@@ -41,11 +38,10 @@ Type your prompt after `/aug`, the extension will:
 /augment explain how the model routing works
 ```
 
-## Features
+## How it works
 
-- **Intent detection** — auto-classifies prompt type and tailors the rewrite
-- **Two rewrite modes** — `plain` (stronger prompt) or `execution-contract` (structured task contract), auto-selected
-- **Prompt Leverage framework** — adds framework blocks (work style, tool rules, verification, done criteria) as needed
-- **Intensity levels** — Light / Standard / Deep, inferred from task complexity
-- **Model-family aware** — generates GPT-style or Claude-style prompts based on active model
-- **Context injection** — includes recent conversation and project metadata
+- **Intent detection** — classifies your prompt type and tailors the rewrite accordingly
+- **Rewrite modes** — `plain` rewrites into a stronger prompt; `execution-contract` compiles into a structured task contract with objective, constraints, verification, and done criteria
+- **Effort scaling** — Light / Standard / Deep intensity, inferred from task complexity
+- **Model-family aware** — generates Claude-style or GPT-style prompts based on the active model
+- **Context aware** — injects recent conversation history and project metadata (cwd, git branch)

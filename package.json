@@ -1,14 +1,13 @@
 {
   "name": "pi-augment",
-  "version": "0.2.1",
-  "description": "Intent-aware prompt rewriter and execution-contract compiler for Pi",
+  "version": "1.0.0",
+  "description": "Intent-aware prompt rewriter for Pi using the Prompt Leverage framework",
   "keywords": [
     "pi-package",
     "pi-extension",
     "prompt-enhancer",
     "prompt-engineering",
     "coding-agent",
-    "promptsmith",
     "ai"
   ],
   "type": "module",
@@ -26,68 +25,40 @@
     "typecheck": "tsc --noEmit -p tsconfig.json",
     "smoke-test": "node --import=tsx ./scripts/smoke-test.mjs",
     "test": "node --import=tsx --test ./test/*.test.ts",
-    "check": "tsc --noEmit -p tsconfig.json && node --import=tsx ./scripts/smoke-test.mjs && node --import=tsx --test ./test/*.test.ts && eslint . --max-warnings=0 && prettier --check .",
-    "release": "release-it",
-    "release:first": "release-it --first-release"
+    "check": "pnpm typecheck && pnpm smoke-test && pnpm test && pnpm lint && pnpm format:check"
   },
   "pi": {
     "extensions": [
       "./src/index.ts"
-    ],
-    "image": "https://raw.githubusercontent.com/ayagmar/pi-augment/main/promptsmith.gif"
+    ]
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/ayagmar/pi-augment.git"
+    "url": "git+https://github.com/sting8k/pi-augment.git"
   },
-  "homepage": "https://github.com/ayagmar/pi-augment#readme",
+  "homepage": "https://github.com/sting8k/pi-augment#readme",
   "bugs": {
-    "url": "https://github.com/ayagmar/pi-augment/issues"
+    "url": "https://github.com/sting8k/pi-augment/issues"
   },
   "peerDependencies": {
     "@mariozechner/pi-ai": "*",
-    "@mariozechner/pi-coding-agent": "*",
-    "@mariozechner/pi-tui": "*",
-    "@sinclair/typebox": "*"
+    "@mariozechner/pi-coding-agent": "*"
   },
   "devDependencies": {
     "@mariozechner/pi-ai": "^0.52.8",
     "@mariozechner/pi-coding-agent": "^0.52.8",
     "@mariozechner/pi-tui": "^0.52.8",
-    "@release-it/conventional-changelog": "^10.0.5",
-    "@sinclair/typebox": "^0.34.48",
     "@types/node": "^22.19.10",
     "@typescript-eslint/eslint-plugin": "^8.54.0",
     "@typescript-eslint/parser": "^8.54.0",
     "eslint": "^9.39.2",
     "eslint-config-prettier": "^10.1.8",
     "prettier": "^3.8.1",
-    "release-it": "^19.2.4",
     "tsx": "^4.21.0",
     "typescript": "^5.9.3"
   },
   "license": "MIT",
   "engines": {
     "node": ">=22"
-  },
-  "release-it": {
-    "git": {
-      "commitMessage": "chore(release): v${version}",
-      "tagName": "v${version}",
-      "requireCleanWorkingDir": true,
-      "requireUpstream": true
-    },
-    "github": {
-      "release": true
-    },
-    "npm": {
-      "publish": true
-    },
-    "plugins": {
-      "@release-it/conventional-changelog": {
-        "preset": "conventionalcommits",
-        "infile": "CHANGELOG.md"
-      }
-    }
   }
 }

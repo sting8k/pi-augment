@@ -12,7 +12,7 @@ import type { AugmentTaskIntent } from "./types.js";
 // Intensity
 // ---------------------------------------------------------------------------
 
-export type PromptLeverageIntensity = "Light" | "Standard" | "Deep";
+type PromptLeverageIntensity = "Light" | "Standard" | "Deep";
 
 const DEEP_SIGNALS = [
   /\bcareful\b/,

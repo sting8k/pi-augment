@@ -42,7 +42,7 @@ export async function buildPromptContext(
   };
 }
 
-export function buildRecentConversationExcerpts(
+function buildRecentConversationExcerpts(
   entries: SessionEntry[],
   tokenBudget: number
 ): ConversationExcerpt[] {

@@ -3,12 +3,12 @@ import type {
   AugmentTaskIntent,
 } from "./types.js";
 
-export interface IntentMatchRule {
+interface IntentMatchRule {
   intent: AugmentTaskIntent;
   patterns: RegExp[];
 }
 
-export interface DraftIntentAnalysis {
+interface DraftIntentAnalysis {
   intent: AugmentTaskIntent;
   effectiveRewriteMode: AugmentRewriteMode;
 }
