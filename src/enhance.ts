@@ -19,10 +19,7 @@ export async function enhance(
     throw new Error("No active model. Select a model first.");
   }
 
-  const apiKey = await ctx.modelRegistry.getApiKey(model);
-  if (!apiKey) {
-    throw new Error(`No API key for ${model.provider}/${model.id}.`);
-  }
+  const auth = await resolveModelAuth(ctx, model);
 
   const promptContext = await buildPromptContext(ctx, exec, draft);
   const request = buildStrategyRequest(promptContext);
@@ -31,7 +28,7 @@ export async function enhance(
     ctx,
     `Augmenting (${promptContext.intent}, ${promptContext.targetFamily})...`,
     async (signal) => {
-      const response = await callLLM(model, apiKey, request, signal);
+      const response = await callLLM(model, auth.apiKey, auth.headers, request, signal);
       if (!response) return null;
 
       const text = extractText(response);
@@ -40,7 +37,7 @@ export async function enhance(
       } catch {
         // Retry once with stronger sentinel reminder
         const retryRequest = addSentinelReminder(request);
-        const retryResponse = await callLLM(model, apiKey, retryRequest, signal);
+        const retryResponse = await callLLM(model, auth.apiKey, auth.headers, retryRequest, signal);
         if (!retryResponse) return null;
         return parseEnhancedPrompt(extractText(retryResponse));
       }
@@ -57,9 +54,48 @@ export async function enhance(
   };
 }
 
+async function resolveModelAuth(
+  ctx: ExtensionCommandContext,
+  model: Model<Api>
+): Promise<{ apiKey: string; headers?: Record<string, string> }> {
+  const registry = ctx.modelRegistry as {
+    getApiKeyAndHeaders?: (model: Model<Api>) => Promise<{
+      ok: boolean;
+      apiKey?: string;
+      headers?: Record<string, string>;
+      error?: string;
+    }>;
+    getApiKey?: (model: Model<Api>) => Promise<string | undefined>;
+  };
+
+  if (typeof registry.getApiKeyAndHeaders === "function") {
+    const auth = await registry.getApiKeyAndHeaders(model);
+    if (!auth.ok) {
+      throw new Error(auth.error ?? `Failed to resolve auth for ${model.provider}/${model.id}.`);
+    }
+    if (!auth.apiKey) {
+      throw new Error(`No API key for ${model.provider}/${model.id}.`);
+    }
+    return auth.headers ? { apiKey: auth.apiKey, headers: auth.headers } : { apiKey: auth.apiKey };
+  }
+
+  if (typeof registry.getApiKey === "function") {
+    const apiKey = await registry.getApiKey(model);
+    if (!apiKey) {
+      throw new Error(`No API key for ${model.provider}/${model.id}.`);
+    }
+    return { apiKey };
+  }
+
+  throw new Error(
+    "Your Pi version does not expose a supported modelRegistry auth API. Upgrade pi or use a pi-augment build compatible with your runtime."
+  );
+}
+
 async function callLLM(
   model: Model<Api>,
   apiKey: string,
+  headers: Record<string, string> | undefined,
   request: Context,
   signal: AbortSignal
 ): Promise<AssistantMessage | null> {
@@ -70,6 +106,7 @@ async function callLLM(
   try {
     const response = await complete(model, request, {
       apiKey,
+      ...(headers ? { headers } : {}),
       signal: combined,
       maxTokens: Math.min(model.maxTokens, ENHANCER_MAX_OUTPUT_TOKENS),
     });
