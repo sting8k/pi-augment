@@ -23,14 +23,14 @@ void test("parseEnhancedPrompt takes the first block when multiple are present",
   );
 });
 
-void test("parseEnhancedPrompt ignores leading explanatory text (strategy 1)", () => {
+void test("parseEnhancedPrompt ignores leading explanatory text", () => {
   assert.equal(
     parseEnhancedPrompt(`Here is the enhanced prompt:\n${SENTINEL_OPEN}Better prompt${SENTINEL_CLOSE}`),
     "Better prompt"
   );
 });
 
-void test("parseEnhancedPrompt handles fence wrapping via stripOuterMarkdownFences (strategy 2)", () => {
+void test("parseEnhancedPrompt handles fence wrapping", () => {
   assert.equal(
     parseEnhancedPrompt(
       "Here's the enhanced prompt:\n\n```xml\n" +
@@ -41,7 +41,7 @@ void test("parseEnhancedPrompt handles fence wrapping via stripOuterMarkdownFenc
   );
 });
 
-void test("parseEnhancedPrompt handles misaligned/misplaced fences via stripAllFenceLines (strategy 3)", () => {
+void test("parseEnhancedPrompt handles misplaced fence lines", () => {
   // Model sometimes puts a fence in the middle of output
   assert.equal(
     parseEnhancedPrompt(
@@ -91,7 +91,7 @@ void test("parseEnhancedPrompt prefers primary sentinel over execution_contract"
   );
 });
 
-void test("parseEnhancedPrompt handles heading before fence via stripLeadingLines (strategy 4)", () => {
+void test("parseEnhancedPrompt handles heading before fence", () => {
   assert.equal(
     parseEnhancedPrompt(
       "## Execution Contract\n\n\`\`\`xml\n" +
@@ -102,7 +102,7 @@ void test("parseEnhancedPrompt handles heading before fence via stripLeadingLine
   );
 });
 
-void test("parseEnhancedPrompt extracts sentinel block amid surrounding noise (strategy 5)", () => {
+void test("parseEnhancedPrompt extracts execution_contract amid surrounding noise", () => {
   assert.equal(
     parseEnhancedPrompt(
       "Here is the prompt you requested:\n\n" +
@@ -110,5 +110,18 @@ void test("parseEnhancedPrompt extracts sentinel block amid surrounding noise (s
       "Let me know if you need anything else!"
     ),
     "Actual prompt content"
+  );
+});
+
+void test("parseEnhancedPrompt accepts raw execution-contract XML without wrapper", () => {
+  assert.equal(
+    parseEnhancedPrompt(
+      "```xml\n" +
+      "<task>Fix augment parsing</task>\n\n" +
+      "<context>Anthropic returned raw execution contract</context>\n\n" +
+      "<verification>Run parser tests</verification>\n" +
+      "```"
+    ),
+    "<task>Fix augment parsing</task>\n\n<context>Anthropic returned raw execution contract</context>\n\n<verification>Run parser tests</verification>"
   );
 });

@@ -1,99 +1,121 @@
 import { SENTINEL_CLOSE, SENTINEL_OPEN } from "./constants.js";
 
+const EXECUTION_CONTRACT_OPEN = "<execution_contract>";
+const EXECUTION_CONTRACT_CLOSE = "</execution_contract>";
+const RAW_EXECUTION_TAGS = [
+  "task",
+  "context",
+  "constraints",
+  "diagnosis",
+  "fix",
+  "work_style",
+  "tool_rules",
+  "verification",
+  "done_criteria",
+  "deliverable",
+] as const;
+
 export function parseEnhancedPrompt(responseText: string): string {
-  const text = responseText.trim();
+  const text = normalizePromptText(responseText);
 
-  // Strategy 1: try the text as-is (clean output)
-  const result = tryParse(text);
-  if (result !== null) return result;
+  const primary = extractWrappedBlock(text, SENTINEL_OPEN, SENTINEL_CLOSE);
+  if (primary !== null) return primary;
 
-  // Strategy 2: strip outer markdown fences
-  const stripped = stripOuterMarkdownFences(text);
-  const result2 = tryParse(stripped);
-  if (result2 !== null) return result2;
+  const executionContract = extractWrappedBlock(
+    text,
+    EXECUTION_CONTRACT_OPEN,
+    EXECUTION_CONTRACT_CLOSE
+  );
+  if (executionContract !== null) return executionContract;
 
-  // Strategy 3: strip ALL fence delimiter lines
-  const defenced = stripAllFenceLines(text);
-  const result3 = tryParse(defenced);
-  if (result3 !== null) return result3;
-
-  // Strategy 4: strip leading decorative lines (headings, blank lines) before
-  // outer fences — catches "## Heading\n\n```" patterns that Strategy 2 misses
-  const trimmed = stripLeadingLines(text);
-  const result4 = tryParse(trimmed);
-  if (result4 !== null) return result4;
-
-  // Strategy 5: find first occurrence of any sentinel block anywhere in text
-  const result5 = tryParseAnywhere(text);
-  if (result5 !== null) return result5;
+  const rawExecutionContract = extractRawExecutionContract(text);
+  if (rawExecutionContract !== null) return rawExecutionContract;
 
   throw new Error(
     "Augment received invalid model output: expected exactly one sentinel block."
   );
 }
 
-function tryParse(text: string): string | null {
-  const sentinelPairs: [string, string][] = [
-    [SENTINEL_OPEN, SENTINEL_CLOSE],
-    ["<execution_contract>", "</execution_contract>"],
-  ];
+function extractWrappedBlock(text: string, open: string, close: string): string | null {
+  if (!text) return null;
 
-  for (const [open, close] of sentinelPairs) {
-    const escapedOpen = escapeRegExp(open);
-    const escapedClose = escapeRegExp(close);
-    // eslint-disable-next-line no-useless-escape
-    const pattern = new RegExp(escapedOpen + "([\\s\\S]*?)" + escapedClose, "g");
-    const matches = [...text.matchAll(pattern)];
-    if (matches.length === 0) continue;
+  const pattern = new RegExp(escapeRegExp(open) + "([\\s\\S]*?)" + escapeRegExp(close));
+  const match = pattern.exec(text);
+  if (!match) return null;
 
-    const match = matches[0];
-    const extracted = normalizePromptText(match[1] ?? "");
-    if (!extracted.trim()) continue;
-
-    return extracted;
-  }
-
-  return null;
+  const extracted = normalizePromptText(match[1] ?? "");
+  return extracted || null;
 }
 
-function tryParseAnywhere(text: string): string | null {
-  const sentinelPairs: [string, string][] = [
-    [SENTINEL_OPEN, SENTINEL_CLOSE],
-    ["<execution_contract>", "</execution_contract>"],
-  ];
+function extractRawExecutionContract(text: string): string | null {
+  if (!text) return null;
 
-  for (const [open, close] of sentinelPairs) {
-    const escapedOpen = escapeRegExp(open);
-    const escapedClose = escapeRegExp(close);
-    const pattern = new RegExp(escapedOpen + "([\\s\\S]*?)" + escapedClose);
-    const match = pattern.exec(text);
-    if (!match) continue;
-    const extracted = normalizePromptText(match[1] ?? "");
-    if (!extracted.trim()) continue;
-    return extracted;
+  const block = sliceRawExecutionContract(text);
+  if (!block) return null;
+  if (!looksLikeExecutionContract(block)) return null;
+
+  return block;
+}
+
+function sliceRawExecutionContract(text: string): string | null {
+  const start = findFirstTagStart(text);
+  if (start === -1) return null;
+
+  const end = findLastTagEnd(text);
+  if (end === -1 || end <= start) return null;
+
+  const block = normalizePromptText(text.slice(start, end));
+  return block || null;
+}
+
+function findFirstTagStart(text: string): number {
+  let start = -1;
+
+  for (const tag of RAW_EXECUTION_TAGS) {
+    const index = text.indexOf(`<${tag}>`);
+    if (index === -1) continue;
+    if (start === -1 || index < start) start = index;
   }
 
-  return null;
+  return start;
+}
+
+function findLastTagEnd(text: string): number {
+  let end = -1;
+
+  for (const tag of RAW_EXECUTION_TAGS) {
+    const close = `</${tag}>`;
+    const index = text.lastIndexOf(close);
+    if (index === -1) continue;
+
+    const candidateEnd = index + close.length;
+    if (candidateEnd > end) end = candidateEnd;
+  }
+
+  return end;
+}
+
+function looksLikeExecutionContract(text: string): boolean {
+  for (const tag of ["task", "context"]) {
+    if (!hasWrappedTag(text, tag)) return false;
+  }
+
+  let matches = 0;
+  for (const tag of RAW_EXECUTION_TAGS) {
+    if (hasWrappedTag(text, tag)) matches += 1;
+  }
+
+  return matches >= 2;
+}
+
+function hasWrappedTag(text: string, tag: string): boolean {
+  return new RegExp(`<${tag}>[\\s\\S]*?</${tag}>`).test(text);
 }
 
 export function stripOuterMarkdownFences(text: string): string {
   let result = text.replace(/^```[\w]*\n?/, "");
   result = result.replace(/\n?```$/, "");
   return result.trim();
-}
-
-function stripAllFenceLines(text: string): string {
-  return text
-    .split("\n")
-    .filter((line) => !/^```[\w]*$/.test(line))
-    .join("\n");
-}
-
-function stripLeadingLines(text: string): string {
-  const lines = text.split("\n");
-  const start = lines.findIndex((line) => line.trim() !== "");
-  if (start === -1) return text;
-  return lines.slice(start).join("\n");
 }
 
 export function buildSentinelReminder(): string {
