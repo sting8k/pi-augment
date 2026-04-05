@@ -5,7 +5,7 @@ import type { ExtensionAPI, ExtensionCommandContext } from "@mariozechner/pi-cod
 import { BorderedLoader } from "@mariozechner/pi-coding-agent";
 import { ENHANCER_MAX_OUTPUT_TOKENS, DEFAULT_ENHANCEMENT_TIMEOUT_MS } from "./constants.js";
 import { buildPromptContext } from "./context.js";
-import { parseEnhancedPrompt, stripMarkdownFences } from "./parser.js";
+import { parseEnhancedPrompt } from "./parser.js";
 import { buildStrategyRequest } from "./strategies/strategy.js";
 import type { EnhancementResult } from "./types.js";
 
@@ -179,11 +179,9 @@ function addSentinelReminder(request: Context): Context {
 }
 
 function extractText(response: AssistantMessage): string {
-  return stripMarkdownFences(
-    response.content
-      .filter((p): p is { type: "text"; text: string } => p.type === "text")
-      .map((p) => p.text)
-      .join("\n")
-      .trim()
-  );
+  return response.content
+    .filter((p): p is { type: "text"; text: string } => p.type === "text")
+    .map((p) => p.text)
+    .join("\n")
+    .trim();
 }

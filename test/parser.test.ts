@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { parseEnhancedPrompt, stripMarkdownFences } from "../src/parser.js";
+import { parseEnhancedPrompt, stripOuterMarkdownFences } from "../src/parser.js";
 import { SENTINEL_CLOSE, SENTINEL_OPEN } from "../src/constants.js";
 
 void test("parseEnhancedPrompt extracts the enclosed prompt", () => {
@@ -23,31 +23,54 @@ void test("parseEnhancedPrompt takes the first block when multiple are present",
   );
 });
 
-void test("parseEnhancedPrompt ignores leading explanatory text", () => {
+void test("parseEnhancedPrompt ignores leading explanatory text (strategy 1)", () => {
   assert.equal(
     parseEnhancedPrompt(`Here is the enhanced prompt:\n${SENTINEL_OPEN}Better prompt${SENTINEL_CLOSE}`),
     "Better prompt"
   );
 });
 
+void test("parseEnhancedPrompt handles fence wrapping via stripOuterMarkdownFences (strategy 2)", () => {
+  assert.equal(
+    parseEnhancedPrompt(
+      "Here's the enhanced prompt:\n\n```xml\n" +
+      `${SENTINEL_OPEN}Better prompt${SENTINEL_CLOSE}` +
+      "\n```\n\nLet me know if you need anything else!"
+    ),
+    "Better prompt"
+  );
+});
+
+void test("parseEnhancedPrompt handles misaligned/misplaced fences via stripAllFenceLines (strategy 3)", () => {
+  // Model sometimes puts a fence in the middle of output
+  assert.equal(
+    parseEnhancedPrompt(
+      `${SENTINEL_OPEN}Better prompt${SENTINEL_CLOSE}\n\`\`\`\nsome footer\n\`\`\``
+    ),
+    "Better prompt"
+  );
+});
+
 void test("parseEnhancedPrompt rejects empty sentinel block", () => {
-  assert.throws(() => parseEnhancedPrompt(`${SENTINEL_OPEN}${SENTINEL_CLOSE}`), /empty enhanced prompt/i);
+  // With multi-strategy parsing, empty blocks fall through all strategies and
+  // hit the generic missing-block error (expected behavior — empty = invalid)
+  assert.throws(() => parseEnhancedPrompt(`${SENTINEL_OPEN}${SENTINEL_CLOSE}`), /sentinel block/i);
 });
 
-void test("stripMarkdownFences strips fenced output", () => {
+void test("stripOuterMarkdownFences strips fenced output", () => {
   assert.equal(
-    stripMarkdownFences("```xml\n<augment-enhanced-prompt>prompt</augment-enhanced-prompt>\n```"),
+    stripOuterMarkdownFences("```xml\n<augment-enhanced-prompt>prompt</augment-enhanced-prompt>\n```"),
     "<augment-enhanced-prompt>prompt</augment-enhanced-prompt>"
   );
 });
 
-void test("stripMarkdownFences strips untyped fences", () => {
+void test("stripOuterMarkdownFences strips untyped fences", () => {
   assert.equal(
-    stripMarkdownFences("```\n<augment-enhanced-prompt>prompt</augment-enhanced-prompt>\n```"),
+    stripOuterMarkdownFences("```\n<augment-enhanced-prompt>prompt</augment-enhanced-prompt>\n```"),
     "<augment-enhanced-prompt>prompt</augment-enhanced-prompt>"
   );
 });
 
-void test("stripMarkdownFences leaves plain text unchanged", () => {
-  assert.equal(stripMarkdownFences("no fences here"), "no fences here");
+void test("stripOuterMarkdownFences leaves plain text unchanged", () => {
+  assert.equal(stripOuterMarkdownFences("no fences here"), "no fences here");
 });

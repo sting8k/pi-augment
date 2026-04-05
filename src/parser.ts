@@ -1,40 +1,70 @@
 import { SENTINEL_CLOSE, SENTINEL_OPEN } from "./constants.js";
 
 export function parseEnhancedPrompt(responseText: string): string {
-  let text = responseText.trim();
+  const text = responseText.trim();
 
-  // Strip markdown code fences that some models wrap around the output
-  text = stripMarkdownFences(text);
+  // Strategy 1: try the text as-is (clean output)
+  const result = tryParse(text);
+  if (result !== null) return result;
 
+  // Strategy 2: strip outer markdown fences (common with Claude wrapping output in fences)
+  const stripped = stripOuterMarkdownFences(text);
+  const result2 = tryParse(stripped);
+  if (result2 !== null) return result2;
+
+  // Strategy 3: strip ALL fence delimiter lines (handles nested/misaligned fences)
+  const defenced = stripAllFenceLines(text);
+  const result3 = tryParse(defenced);
+  if (result3 !== null) return result3;
+
+  throw new Error(
+    "Augment received invalid model output: expected exactly one sentinel block."
+  );
+}
+
+/**
+ * Attempt to find and extract the sentinel block. Returns null if no block found
+ * or if the block is empty — does not throw.
+ */
+function tryParse(text: string): string | null {
   const escapedOpen = escapeRegExp(SENTINEL_OPEN);
   const escapedClose = escapeRegExp(SENTINEL_CLOSE);
   const pattern = new RegExp(`${escapedOpen}([\\s\\S]*?)${escapedClose}`, "g");
   const matches = [...text.matchAll(pattern)];
 
-  if (matches.length === 0) {
-    throw new Error(
-      "Augment received invalid model output: expected exactly one sentinel block."
-    );
-  }
+  if (matches.length === 0) return null;
 
-  // Use the first match — relax strict single-block enforcement so markdown
-  // wrappers, leading explanatory text, and trailing comments don't cause
-  // spurious failures.
+  // Use the first match — relaxes spurious failures from explanatory text or
+  // duplicate blocks in the output.
   const match = matches[0];
-  if (!match) {
-    throw new Error("Augment received invalid model output: missing sentinel block.");
-  }
-
   const extracted = normalizePromptText(match[1] ?? "");
-  if (!extracted.trim()) {
-    throw new Error("Augment received an empty enhanced prompt.");
-  }
+  if (!extracted.trim()) return null;
 
   return extracted;
 }
 
-export function stripMarkdownFences(text: string): string {
-  return text.replace(/^```[\w]*\n?/, "").replace(/\n?```$/, "").trim();
+/**
+ * Strip exactly one pair of outer fences, if present.
+ * Handles: ```, ```xml, ```html, ```\n at both ends.
+ * Leaves inner fence lines untouched.
+ */
+export function stripOuterMarkdownFences(text: string): string {
+  // Remove opening fence at start
+  let result = text.replace(/^```[\w]*\n?/, "");
+  // Remove closing fence at end
+  result = result.replace(/\n?```$/, "");
+  return result.trim();
+}
+
+/**
+ * Strip ALL lines that are fence delimiters. Used as fallback when the model
+ * produces misaligned or nested fences.
+ */
+function stripAllFenceLines(text: string): string {
+  return text
+    .split("\n")
+    .filter((line) => !/^```[\w]*$/.test(line))
+    .join("\n");
 }
 
 export function buildSentinelReminder(): string {

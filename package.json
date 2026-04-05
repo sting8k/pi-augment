@@ -1,6 +1,6 @@
 {
   "name": "pi-augment",
-  "version": "1.0.3",
+  "version": "1.0.4",
   "description": "Augment-style prompt rewriter for Pi — one command, stronger prompts",
   "keywords": [
     "pi-package",
