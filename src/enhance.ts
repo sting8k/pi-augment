@@ -35,16 +35,19 @@ export async function enhance(
       try {
         return parseEnhancedPrompt(text);
       } catch (firstError) {
+        // Log the raw output to stderr so we can debug what the model actually returned
+        console.error("[pi-augment] First attempt raw output:\n" + text);
         // Retry once with stronger sentinel reminder
         const retryRequest = addSentinelReminder(request);
         const retryResponse = await callLLM(model, auth.apiKey, auth.headers, retryRequest, signal);
         if (!retryResponse) {
           throw firstError;
         }
+        const retryText = extractText(retryResponse);
+        console.error("[pi-augment] Retry raw output:\n" + retryText);
         try {
-          return parseEnhancedPrompt(extractText(retryResponse));
+          return parseEnhancedPrompt(retryText);
         } catch (secondError) {
-          // Surface the first error with context that a retry also failed
           const first = firstError instanceof Error ? firstError.message : String(firstError);
           const second = secondError instanceof Error ? secondError.message : String(secondError);
           throw new Error(
