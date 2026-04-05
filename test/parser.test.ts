@@ -74,3 +74,30 @@ void test("stripOuterMarkdownFences strips untyped fences", () => {
 void test("stripOuterMarkdownFences leaves plain text unchanged", () => {
   assert.equal(stripOuterMarkdownFences("no fences here"), "no fences here");
 });
+
+void test("parseEnhancedPrompt accepts <execution_contract> as fallback sentinel", () => {
+  assert.equal(
+    parseEnhancedPrompt("<execution_contract>\nBetter prompt\n</execution_contract>"),
+    "Better prompt"
+  );
+});
+
+void test("parseEnhancedPrompt prefers primary sentinel over execution_contract", () => {
+  assert.equal(
+    parseEnhancedPrompt(
+      `${SENTINEL_OPEN}primary${SENTINEL_CLOSE}\n<execution_contract>fallback</execution_contract>`
+    ),
+    "primary"
+  );
+});
+
+void test("parseEnhancedPrompt handles heading before fence via stripLeadingLines (strategy 4)", () => {
+  assert.equal(
+    parseEnhancedPrompt(
+      "## Execution Contract\n\n\`\`\`xml\n" +
+      "<execution_contract>Better prompt</execution_contract>\n" +
+      "\`\`\`\n"
+    ),
+    "Better prompt"
+  );
+});
