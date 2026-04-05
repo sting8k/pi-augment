@@ -1,28 +1,28 @@
 import { SENTINEL_CLOSE, SENTINEL_OPEN } from "./constants.js";
 
 export function parseEnhancedPrompt(responseText: string): string {
+  let text = responseText.trim();
+
+  // Strip markdown code fences that some models wrap around the output
+  text = stripMarkdownFences(text);
+
   const escapedOpen = escapeRegExp(SENTINEL_OPEN);
   const escapedClose = escapeRegExp(SENTINEL_CLOSE);
   const pattern = new RegExp(`${escapedOpen}([\\s\\S]*?)${escapedClose}`, "g");
-  const matches = [...responseText.matchAll(pattern)];
+  const matches = [...text.matchAll(pattern)];
 
-  if (matches.length !== 1) {
+  if (matches.length === 0) {
     throw new Error(
       "Augment received invalid model output: expected exactly one sentinel block."
     );
   }
 
+  // Use the first match — relax strict single-block enforcement so markdown
+  // wrappers, leading explanatory text, and trailing comments don't cause
+  // spurious failures.
   const match = matches[0];
   if (!match) {
     throw new Error("Augment received invalid model output: missing sentinel block.");
-  }
-
-  const before = responseText.slice(0, match.index ?? 0).trim();
-  const after = responseText.slice((match.index ?? 0) + match[0].length).trim();
-  if (before || after) {
-    throw new Error(
-      "Augment received invalid model output: unexpected text outside the sentinel block."
-    );
   }
 
   const extracted = normalizePromptText(match[1] ?? "");
@@ -31,6 +31,10 @@ export function parseEnhancedPrompt(responseText: string): string {
   }
 
   return extracted;
+}
+
+export function stripMarkdownFences(text: string): string {
+  return text.replace(/^```[\w]*\n?/, "").replace(/\n?```$/, "").trim();
 }
 
 export function buildSentinelReminder(): string {

@@ -5,7 +5,7 @@ import type { ExtensionAPI, ExtensionCommandContext } from "@mariozechner/pi-cod
 import { BorderedLoader } from "@mariozechner/pi-coding-agent";
 import { ENHANCER_MAX_OUTPUT_TOKENS, DEFAULT_ENHANCEMENT_TIMEOUT_MS } from "./constants.js";
 import { buildPromptContext } from "./context.js";
-import { buildSentinelReminder, parseEnhancedPrompt } from "./parser.js";
+import { parseEnhancedPrompt, stripMarkdownFences } from "./parser.js";
 import { buildStrategyRequest } from "./strategies/strategy.js";
 import type { EnhancementResult } from "./types.js";
 
@@ -34,12 +34,23 @@ export async function enhance(
       const text = extractText(response);
       try {
         return parseEnhancedPrompt(text);
-      } catch {
+      } catch (firstError) {
         // Retry once with stronger sentinel reminder
         const retryRequest = addSentinelReminder(request);
         const retryResponse = await callLLM(model, auth.apiKey, auth.headers, retryRequest, signal);
-        if (!retryResponse) return null;
-        return parseEnhancedPrompt(extractText(retryResponse));
+        if (!retryResponse) {
+          throw firstError;
+        }
+        try {
+          return parseEnhancedPrompt(extractText(retryResponse));
+        } catch (secondError) {
+          // Surface the first error with context that a retry also failed
+          const first = firstError instanceof Error ? firstError.message : String(firstError);
+          const second = secondError instanceof Error ? secondError.message : String(secondError);
+          throw new Error(
+            `Augment failed after retry. First attempt: ${first}. Second attempt: ${second}`
+          );
+        }
       }
     }
   );
@@ -163,14 +174,16 @@ async function runWithLoader<T>(
 function addSentinelReminder(request: Context): Context {
   return {
     ...request,
-    systemPrompt: `${request.systemPrompt}\n${buildSentinelReminder()} Do not add markdown fences, explanations, or any text before or after the sentinel block.`,
+    systemPrompt: `${request.systemPrompt}\nDo not add markdown fences, explanations, or any text before or after the sentinel block. Return exactly one block.`,
   };
 }
 
 function extractText(response: AssistantMessage): string {
-  return response.content
-    .filter((p): p is { type: "text"; text: string } => p.type === "text")
-    .map((p) => p.text)
-    .join("\n")
-    .trim();
+  return stripMarkdownFences(
+    response.content
+      .filter((p): p is { type: "text"; text: string } => p.type === "text")
+      .map((p) => p.text)
+      .join("\n")
+      .trim()
+  );
 }
