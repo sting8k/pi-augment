@@ -23,6 +23,10 @@ export function parseEnhancedPrompt(responseText: string): string {
   const result4 = tryParse(trimmed);
   if (result4 !== null) return result4;
 
+  // Strategy 5: find first occurrence of any sentinel block anywhere in text
+  const result5 = tryParseAnywhere(text);
+  if (result5 !== null) return result5;
+
   throw new Error(
     "Augment received invalid model output: expected exactly one sentinel block."
   );
@@ -46,6 +50,26 @@ function tryParse(text: string): string | null {
     const extracted = normalizePromptText(match[1] ?? "");
     if (!extracted.trim()) continue;
 
+    return extracted;
+  }
+
+  return null;
+}
+
+function tryParseAnywhere(text: string): string | null {
+  const sentinelPairs: [string, string][] = [
+    [SENTINEL_OPEN, SENTINEL_CLOSE],
+    ["<execution_contract>", "</execution_contract>"],
+  ];
+
+  for (const [open, close] of sentinelPairs) {
+    const escapedOpen = escapeRegExp(open);
+    const escapedClose = escapeRegExp(close);
+    const pattern = new RegExp(escapedOpen + "([\\s\\S]*?)" + escapedClose);
+    const match = pattern.exec(text);
+    if (!match) continue;
+    const extracted = normalizePromptText(match[1] ?? "");
+    if (!extracted.trim()) continue;
     return extracted;
   }
 

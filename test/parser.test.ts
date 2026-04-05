@@ -101,3 +101,14 @@ void test("parseEnhancedPrompt handles heading before fence via stripLeadingLine
     "Better prompt"
   );
 });
+
+void test("parseEnhancedPrompt extracts sentinel block amid surrounding noise (strategy 5)", () => {
+  assert.equal(
+    parseEnhancedPrompt(
+      "Here is the prompt you requested:\n\n" +
+      "<execution_contract>\nActual prompt content\n</execution_contract>\n\n" +
+      "Let me know if you need anything else!"
+    ),
+    "Actual prompt content"
+  );
+});
